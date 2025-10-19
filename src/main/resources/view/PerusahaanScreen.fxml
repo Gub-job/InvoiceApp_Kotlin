@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<VBox xmlns:fx="http://javafx.com/fxml"
+      fx:controller="ui.PerusahaanScreen"
+      alignment="CENTER" spacing="10" style="-fx-padding: 20;"
+      stylesheets="@/style.css">
+      
+    <Label text="Daftar Perusahaan" style="-fx-font-size: 18; -fx-font-weight: bold;" />
+
+    <!-- Tabel daftar perusahaan -->
+    <TableView fx:id="tblPerusahaan" prefWidth="500" prefHeight="300">
+        <columns>
+            <TableColumn text="ID" prefWidth="50" fx:id="colId" />
+            <TableColumn text="Nama Perusahaan" prefWidth="300" fx:id="colNama" />
+        </columns>
+    </TableView>
+
+    <!-- Logo Perusahaan -->
+    <ImageView fx:id="imgLogo" fitWidth="120" fitHeight="120" visible="false" />
+
+    <!-- Tombol di tengah -->
+    <HBox alignment="CENTER" spacing="10">
+        <Button fx:id="btnTambahPerusahaan" text="+" prefWidth="40" prefHeight="40" />
+        <Button fx:id="btnPilih" text="Pilih" prefWidth="100" />
+    </HBox>
+
+</VBox>
