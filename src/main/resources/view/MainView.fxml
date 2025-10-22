@@ -1,26 +1,31 @@
 <?xml version="1.0" encoding="UTF-8"?>
-
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
-
-<BorderPane xmlns:fx="http://javafx.com/fxml" fx:controller="controller.MainController">
+<?import javafx.geometry.*?>
+<BorderPane fx:id="mainPane" xmlns:fx="http://javafx.com/fxml" fx:controller="controller.MainController">
     <top>
-        <MenuBar>
-            <Menu text="Data">
-                <MenuItem text="Pelanggan" onAction="#bukaPelanggan"/>
-                <MenuItem text="Produk" onAction="#bukaProduk"/>
-                <MenuItem text="Perusahaan" onAction="#bukaPerusahaan"/>
-            </Menu>
-            <Menu text="Transaksi">
-                <MenuItem text="Input Penjualan" onAction="#bukaTransaksi"/>
-            </Menu>
-            <Menu text="Laporan">
-                <MenuItem text="Laporan Penjualan" onAction="#bukaLaporan"/>
-            </Menu>
-        </MenuBar>
+        <VBox>
+            <MenuBar>
+                <Menu text="Data">
+                    <MenuItem text="Pelanggan" onAction="#bukaPelanggan"/>
+                    <MenuItem text="Produk" onAction="#bukaProduk"/>
+                    <MenuItem text="Perusahaan" onAction="#bukaPerusahaan"/>
+                </Menu>
+                <Menu text="Transaksi">
+                    <MenuItem text="Input Penjualan" onAction="#bukaTransaksi"/>
+                </Menu>
+                <Menu text="Laporan">
+                    <MenuItem text="Laporan Penjualan" onAction="#bukaLaporan"/>
+                </Menu>
+            </MenuBar>
+            <!-- Tombol di bawah menu bar, rata kanan -->
+            <HBox alignment="CENTER_RIGHT" style="-fx-padding: 5 10 5 10;">
+                <Button text="Ganti Perusahaan" onAction="#onGantiPerusahaanClicked" />
+            </HBox>
+        </VBox>
     </top>
-
     <center>
-        <Label text="Selamat datang di Aplikasi Invoice Penjualan" style="-fx-font-size: 16px; -fx-padding: 20;" />
+        <Label text="Selamat datang di Invoqr" 
+               style="-fx-font-size: 16px; -fx-padding: 20;" />
     </center>
 </BorderPane>

@@ -11,6 +11,8 @@ repositories {
 dependencies {
     implementation(kotlin("stdlib"))
     implementation("org.xerial:sqlite-jdbc:3.46.0.0")
+    implementation("org.openjfx:javafx-controls:17.0.16")
+    implementation("org.openjfx:javafx-fxml:17.0.16")
 }
 
 javafx {
