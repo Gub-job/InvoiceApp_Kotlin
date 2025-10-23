@@ -17,6 +17,8 @@ class MainApp : Application() {
             val scene = Scene(fxmlLoader.load())
             stage.title = "Invoqr"
             stage.scene = scene
+            stage.minWidth = 800.0
+            stage.minHeight = 600.0
             stage.isMaximized = true
             stage.show()
         }
