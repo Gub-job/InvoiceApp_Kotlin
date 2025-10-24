@@ -10,6 +10,7 @@ import ui.PelangganScreen
 import ui.PerusahaanScreen
 import ui.ProdukScreen
 import javafx.scene.control.Button
+import ui.PerusahaanTableScreen
 
     class MainController {
         @FXML
@@ -20,8 +21,23 @@ import javafx.scene.control.Button
         }
 
         fun bukaPerusahaan(event: ActionEvent) {
-            println("Buka form perusahaan")
+            println("Buka detail perusahaan aktif")
+
+            if (idPerusahaanAktif == 0) {
+                // kalau belum ada perusahaan dipilih
+                val alert = javafx.scene.control.Alert(
+                    javafx.scene.control.Alert.AlertType.WARNING,
+                    "Belum ada perusahaan dipilih. Silakan pilih perusahaan terlebih dahulu."
+                )
+                alert.showAndWait()
+                return
+            }
+
+            val perusahaanDetail = ui.PerusahaanTableScreen(idPerusahaanAktif)
+            val content = perusahaanDetail.getView()
+            mainPane.center = content
         }
+
 
         fun bukaPelanggan(event: ActionEvent) {
             val pelangganScreen = PelangganScreen(idPerusahaanAktif)
