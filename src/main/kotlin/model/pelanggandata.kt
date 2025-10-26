@@ -8,4 +8,9 @@ class PelangganData(id: Int, nama: String, alamat: String, telepon: String) {
     val namaProperty = SimpleStringProperty(nama)
     val alamatProperty = SimpleStringProperty(alamat)
     val teleponProperty = SimpleStringProperty(telepon)
+    
+    override fun toString(): String {
+        return namaProperty.get()
+    }
 }
+
