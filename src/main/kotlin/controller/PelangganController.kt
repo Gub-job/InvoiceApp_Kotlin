@@ -1,59 +1,46 @@
-package ui
+package controller
 
-import javafx.application.Application
 import javafx.collections.FXCollections
+import javafx.fxml.FXML
+import javafx.scene.control.*
+import javafx.scene.layout.GridPane
+import javafx.scene.layout.HBox
 import javafx.geometry.Insets
 import javafx.geometry.Pos
 import javafx.scene.Scene
-import javafx.scene.control.*
-import javafx.scene.layout.BorderPane
-import javafx.scene.layout.GridPane
-import javafx.scene.layout.HBox
 import javafx.stage.Stage
 import model.PelangganData
 import utils.DatabaseHelper
 
-class PelangganScreen(private val idPerusahaan: Int) {
+class PelangganController {
+    private var idPerusahaan: Int = 0
     private val pelangganList = FXCollections.observableArrayList<PelangganData>()
-    private lateinit var table: TableView<PelangganData>
 
-    fun getView(): BorderPane {
-        val root = BorderPane()
-        table = TableView<PelangganData>()
+    @FXML private lateinit var table: TableView<PelangganData>
+    @FXML private lateinit var colNama: TableColumn<PelangganData, String>
+    @FXML private lateinit var colAlamat: TableColumn<PelangganData, String>
+    @FXML private lateinit var colTelepon: TableColumn<PelangganData, String>
+    @FXML private lateinit var btnTambah: Button
+    @FXML private lateinit var btnEdit: Button
+    @FXML private lateinit var btnHapus: Button
+    @FXML private lateinit var btnRefresh: Button
 
-        val colNama = TableColumn<PelangganData, String>("Nama")
+    fun setPerusahaanId(id: Int) {
+        idPerusahaan = id
+        muatPelanggan()
+    }
+
+    @FXML
+    fun initialize() {
         colNama.setCellValueFactory { it.value.namaProperty }
-
-        val colAlamat = TableColumn<PelangganData, String>("Alamat")
         colAlamat.setCellValueFactory { it.value.alamatProperty }
-
-        val colTelepon = TableColumn<PelangganData, String>("Telepon")
         colTelepon.setCellValueFactory { it.value.teleponProperty }
-
-        table.columns.addAll(colNama, colAlamat, colTelepon)
         table.items = pelangganList
 
-        val btnTambah = Button("Tambah Pelanggan")
         btnTambah.setOnAction { showFormTambah() }
-
-        val btnEdit = Button("Edit Pelanggan")
         btnEdit.setOnAction { showFormEdit() }
-
-        val btnHapus = Button("Hapus Pelanggan")
         btnHapus.setOnAction { hapusPelanggan() }
-
-        val btnRefresh = Button("Refresh")
         btnRefresh.setOnAction { muatPelanggan() }
-
-        val layoutBawah = HBox(10.0, btnTambah, btnEdit, btnHapus, btnRefresh)
-        layoutBawah.alignment = Pos.CENTER_RIGHT
-        layoutBawah.padding = Insets(10.0)
-
-        root.center = table
-        root.bottom = layoutBawah
-
-        muatPelanggan()
-        return root
     }
 
     private fun muatPelanggan() {
@@ -78,11 +65,11 @@ class PelangganScreen(private val idPerusahaan: Int) {
 
     private fun showFormTambah() {
         val dialog = Stage()
-        val grid = GridPane()
-        grid.hgap = 15.0
-        grid.vgap = 15.0
-        grid.padding = Insets(30.0)
-        grid.alignment = Pos.CENTER
+        val grid = GridPane().apply {
+            hgap = 15.0; vgap = 15.0
+            padding = Insets(30.0)
+            alignment = Pos.CENTER
+        }
 
         val txtNama = TextField()
         val txtAlamat = TextArea()
@@ -100,23 +87,21 @@ class PelangganScreen(private val idPerusahaan: Int) {
         grid.add(Label("Telepon:"), 0, 2)
         grid.add(txtTelepon, 1, 2)
 
-        val btnSimpan = Button("Simpan")
-        btnSimpan.prefWidth = 120.0
+        val btnSimpan = Button("Simpan").apply { prefWidth = 120.0 }
+        val btnBatal = Button("Batal").apply { prefWidth = 120.0 }
 
-        val btnBatal = Button("Batal")
-        btnBatal.prefWidth = 120.0
-        btnBatal.setOnAction { dialog.close() }
-
-        val tombolBox = HBox(15.0, btnBatal, btnSimpan)
-        tombolBox.alignment = Pos.CENTER_RIGHT
+        val tombolBox = HBox(15.0, btnBatal, btnSimpan).apply {
+            alignment = Pos.CENTER_RIGHT
+        }
         grid.add(tombolBox, 1, 3)
 
+        btnBatal.setOnAction { dialog.close() }
         btnSimpan.setOnAction {
             if (txtNama.text.isBlank()) {
                 showAlert("Error", "Nama tidak boleh kosong!")
                 return@setOnAction
             }
-            
+
             val conn = DatabaseHelper.getConnection()
             val sql = "INSERT INTO pelanggan (nama, alamat, telepon, id_perusahaan) VALUES (?, ?, ?, ?)"
             val ps = conn.prepareStatement(sql)
@@ -131,26 +116,24 @@ class PelangganScreen(private val idPerusahaan: Int) {
             muatPelanggan()
         }
 
-        val scene = Scene(grid, 500.0, 350.0)
-        dialog.scene = scene
+        dialog.scene = Scene(grid, 500.0, 350.0)
         dialog.title = "Tambah Pelanggan"
         dialog.isResizable = false
         dialog.show()
     }
 
     private fun showFormEdit() {
-        val selected = table.selectionModel.selectedItem
-        if (selected == null) {
+        val selected = table.selectionModel.selectedItem ?: run {
             showAlert("Peringatan", "Pilih pelanggan yang akan diedit!")
             return
         }
 
         val dialog = Stage()
-        val grid = GridPane()
-        grid.hgap = 15.0
-        grid.vgap = 15.0
-        grid.padding = Insets(30.0)
-        grid.alignment = Pos.CENTER
+        val grid = GridPane().apply {
+            hgap = 15.0; vgap = 15.0
+            padding = Insets(30.0)
+            alignment = Pos.CENTER
+        }
 
         val txtNama = TextField(selected.namaProperty.value)
         val txtAlamat = TextArea(selected.alamatProperty.value)
@@ -168,17 +151,15 @@ class PelangganScreen(private val idPerusahaan: Int) {
         grid.add(Label("Telepon:"), 0, 2)
         grid.add(txtTelepon, 1, 2)
 
-        val btnSimpan = Button("Simpan")
-        btnSimpan.prefWidth = 120.0
+        val btnSimpan = Button("Simpan").apply { prefWidth = 120.0 }
+        val btnBatal = Button("Batal").apply { prefWidth = 120.0 }
 
-        val btnBatal = Button("Batal")
-        btnBatal.prefWidth = 120.0
-        btnBatal.setOnAction { dialog.close() }
-
-        val tombolBox = HBox(15.0, btnBatal, btnSimpan)
-        tombolBox.alignment = Pos.CENTER_RIGHT
+        val tombolBox = HBox(15.0, btnBatal, btnSimpan).apply {
+            alignment = Pos.CENTER_RIGHT
+        }
         grid.add(tombolBox, 1, 3)
 
+        btnBatal.setOnAction { dialog.close() }
         btnSimpan.setOnAction {
             if (txtNama.text.isBlank()) {
                 showAlert("Error", "Nama tidak boleh kosong!")
@@ -199,16 +180,14 @@ class PelangganScreen(private val idPerusahaan: Int) {
             muatPelanggan()
         }
 
-        val scene = Scene(grid, 500.0, 350.0)
-        dialog.scene = scene
+        dialog.scene = Scene(grid, 500.0, 350.0)
         dialog.title = "Edit Pelanggan"
         dialog.isResizable = false
         dialog.show()
     }
 
     private fun hapusPelanggan() {
-        val selected = table.selectionModel.selectedItem
-        if (selected == null) {
+        val selected = table.selectionModel.selectedItem ?: run {
             showAlert("Peringatan", "Pilih pelanggan yang akan dihapus!")
             return
         }

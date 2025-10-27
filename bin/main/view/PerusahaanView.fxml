@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.geometry.*?>
+
+<BorderPane xmlns:fx="http://javafx.com/fxml"
+            fx:controller="controller.PerusahaanController"
+            prefWidth="600" prefHeight="450"
+            style="-fx-background-color: #FFFFFF; 
+                   -fx-border-color: #E0E0E0; 
+                   -fx-border-width: 1px; 
+                   -fx-border-radius: 8px; 
+                   -fx-background-radius: 8px;">
+
+    <!-- Bagian Atas: Judul -->
+    <top>
+        <Label text="Pilih Perusahaan"
+               BorderPane.alignment="CENTER"
+               style="-fx-font-size: 20px; 
+                      -fx-font-weight: bold; 
+                      -fx-text-fill: #2196F3;"
+               maxWidth="Infinity"
+               alignment="CENTER">
+            <padding>
+                <Insets top="20" right="20" bottom="10" left="20"/>
+            </padding>
+        </Label>
+    </top>
+
+    <!-- Bagian Tengah: Scroll dan Flow -->
+    <center>
+        <StackPane alignment="CENTER">
+            <ScrollPane fx:id="scrollPane"
+                        fitToWidth="true"
+                        fitToHeight="true"
+                        hbarPolicy="NEVER"
+                        vbarPolicy="AS_NEEDED"
+                        style="-fx-background: transparent; -fx-background-color: transparent;">
+                <content>
+                    <FlowPane fx:id="flowPane"
+                              alignment="CENTER"
+                              hgap="20" vgap="20"
+                              prefWrapLength="400"
+                              style="-fx-background-color: #FFFFFF;">
+                        <padding>
+                            <Insets top="20" right="20" bottom="20" left="20"/>
+                        </padding>
+                    </FlowPane>
+                </content>
+            </ScrollPane>
+        </StackPane>
+    </center>
+
+</BorderPane>

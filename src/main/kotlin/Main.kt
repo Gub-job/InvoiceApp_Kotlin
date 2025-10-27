@@ -1,29 +1,53 @@
 package main
 
 import javafx.application.Application
+import javafx.application.Platform
 import javafx.fxml.FXMLLoader
 import javafx.scene.Scene
+import javafx.stage.Modality
 import javafx.stage.Stage
-import ui.PerusahaanScreen
+import controller.PerusahaanController
 
 class MainApp : Application() {
     override fun start(stage: Stage) {
-        // Tampilkan dialog pilih perusahaan terlebih dahulu
-        val perusahaanScreen = PerusahaanScreen { idPerusahaan ->
-            println("Perusahaan dipilih: $idPerusahaan")
+        // 1️⃣ Load dan tampilkan modal pemilihan perusahaan
+        val loader = FXMLLoader(javaClass.getResource("/view/PerusahaanView.fxml"))
+        val perusahaanRoot = loader.load<javafx.scene.Parent>()
+        val perusahaanController = loader.getController<PerusahaanController>()  // Asumsikan nama kelas controller Anda adalah PerusahaanController
+        perusahaanController.setOnPerusahaanSelected { idTerpilih ->
+            controller.MainController.idPerusahaanAktif = idTerpilih
+            println("Perusahaan aktif pertama kali: $idTerpilih")
+        }
+        val perusahaanStage = Stage()
 
-            // Setelah perusahaan dipilih, baru tampilkan MainView
-            val fxmlLoader = FXMLLoader(javaClass.getResource("/view/MainView.fxml"))
-            val scene = Scene(fxmlLoader.load())
+        perusahaanStage.initModality(Modality.APPLICATION_MODAL)
+        perusahaanStage.title = "Pilih Perusahaan"
+        perusahaanStage.scene = Scene(perusahaanRoot)
+        perusahaanStage.showAndWait()
+
+        // 2️⃣ Ambil ID terpilih langsung dari controller modal
+        val idPerusahaanDipilih = perusahaanController.selectedId  // Ini harus null jika tidak ada pemilihan
+
+        if (idPerusahaanDipilih != null) {
+            println("Perusahaan dipilih: $idPerusahaanDipilih")
+
+            // Opsional: Simpan ke MainController atau tempat lain jika dibutuhkan untuk tampilan utama
+            // misalnya, MainController.idPerusahaanAktif = idPerusahaanDipilih
+
+            // 3️⃣ Tampilkan tampilan utama
+            val mainLoader = FXMLLoader(javaClass.getResource("/view/MainView.fxml"))
+            val mainScene = Scene(mainLoader.load())
+
             stage.title = "Invoqr"
-            stage.scene = scene
+            stage.scene = mainScene
             stage.minWidth = 800.0
             stage.minHeight = 600.0
             stage.isMaximized = true
             stage.show()
+        } else {
+            println("Tidak ada perusahaan dipilih, aplikasi ditutup.")
+            Platform.exit()  // Keluar dari app
         }
-
-        perusahaanScreen.show() // tampilkan dialog pilih perusahaan
     }
 }
 

@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.geometry.Insets?>
+
+<BorderPane xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml"
+            fx:controller="controller.PelangganController">
+
+    <center>
+        <TableView fx:id="table">
+            <columns>
+                <TableColumn fx:id="colNama" text="Nama" />
+                <TableColumn fx:id="colAlamat" text="Alamat" />
+                <TableColumn fx:id="colTelepon" text="Telepon" />
+            </columns>
+        </TableView>
+    </center>
+
+    <bottom>
+        <HBox spacing="10" alignment="CENTER_RIGHT" BorderPane.alignment="CENTER">
+            <padding>
+                <Insets top="10" right="10" bottom="10" left="10" />
+            </padding>
+            <Button fx:id="btnTambah" text="Tambah Pelanggan" />
+            <Button fx:id="btnEdit" text="Edit Pelanggan" />
+            <Button fx:id="btnHapus" text="Hapus Pelanggan" />
+            <Button fx:id="btnRefresh" text="Refresh" />
+        </HBox>
+    </bottom>
+</BorderPane>

@@ -2,6 +2,7 @@
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 <?import javafx.geometry.*?>
+
 <BorderPane fx:id="mainPane" xmlns:fx="http://javafx.com/fxml" fx:controller="controller.MainController">
     <top>
         <VBox>
@@ -18,14 +19,17 @@
                     <MenuItem text="Laporan Penjualan" onAction="#bukaLaporan"/>
                 </Menu>
             </MenuBar>
+
             <!-- Tombol di bawah menu bar, rata kanan -->
-            <HBox alignment="CENTER_RIGHT" style="-fx-padding: 5 10 5 10;">
+            <HBox alignment="CENTER_RIGHT" spacing="10" style="-fx-padding: 5 10 5 10;">
+                <Button text="Kembali ke Halaman Utama" onAction="#onKembaliClicked" />
                 <Button text="Ganti Perusahaan" onAction="#onGantiPerusahaanClicked" />
             </HBox>
         </VBox>
     </top>
+
     <center>
-        <Label text="Selamat datang di Invoqr" 
+        <Label text="Selamat datang di Invoqr"
                style="-fx-font-size: 16px; -fx-padding: 20;" />
     </center>
 </BorderPane>

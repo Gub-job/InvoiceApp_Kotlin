@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<BorderPane xmlns:fx="http://javafx.com/fxml"
+            fx:controller="controller.ProdukController">
+
+    <center>
+        <TableView fx:id="table" prefHeight="400.0" prefWidth="600.0">
+            <columns>
+                <TableColumn fx:id="kolomNama" text="Nama Produk" prefWidth="250.0"/>
+                <TableColumn fx:id="kolomUom" text="Satuan (UOM)" prefWidth="150.0"/>
+            </columns>
+        </TableView>
+    </center>
+
+    <bottom>
+        <HBox alignment="CENTER_RIGHT" spacing="10.0" padding="10.0">
+            <Button fx:id="btnTambah" text="Tambah Produk" onAction="#tambahProduk"/>
+            <Button fx:id="btnEdit" text="Edit Produk" onAction="#editProduk"/>
+            <Button fx:id="btnHapus" text="Hapus Produk" onAction="#hapusProduk"/>
+            <Button fx:id="btnRefresh" text="Refresh" onAction="#refreshData"/>
+        </HBox>
+    </bottom>
+
+    <padding>
+        <Insets top="10" right="10" bottom="10" left="10"/>
+    </padding>
+
+</BorderPane>
