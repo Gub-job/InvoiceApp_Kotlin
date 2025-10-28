@@ -5,7 +5,6 @@ import javafx.fxml.FXML
 import javafx.geometry.Bounds
 import javafx.scene.control.*
 import javafx.scene.control.cell.TextFieldTableCell
-import javafx.scene.input.KeyEvent
 import javafx.stage.Popup
 import javafx.util.Callback
 import model.PelangganData
@@ -48,6 +47,7 @@ class ProformaController {
     private var selectedPelanggan: PelangganData? = null
     private var idPerusahaan: Int = 0
     private var idProformaBaru: Int = 0
+    private var currentEditingCell: TextFieldTableCell<ProdukData, String>? = null
 
     fun setIdPerusahaan(id: Int) {
         idPerusahaan = id
@@ -67,9 +67,127 @@ class ProformaController {
         kolomHarga.setCellValueFactory { it.value.hargaProperty }
         kolomTotal.setCellValueFactory { it.value.totalProperty }
 
-        kolomQty.cellFactory = TextFieldTableCell.forTableColumn()
-        kolomHarga.cellFactory = TextFieldTableCell.forTableColumn()
-        kolomNama.cellFactory = TextFieldTableCell.forTableColumn()
+        // Custom cell factory untuk Qty dengan Tab support
+        kolomQty.cellFactory = Callback {
+            object : TextFieldTableCell<ProdukData, String>() {
+                override fun startEdit() {
+                    super.startEdit()
+                    val tf = graphic as? TextField
+                    tf?.setOnKeyPressed { event ->
+                        if (event.code == javafx.scene.input.KeyCode.TAB) {
+                            commitEdit(tf.text)
+                            event.consume()
+                            val selectedRow = table.selectionModel.selectedIndex
+                            javafx.application.Platform.runLater {
+                                table.edit(selectedRow, kolomHarga)
+                            }
+                        }
+                    }
+                    javafx.application.Platform.runLater { tf?.requestFocus() }
+                }
+            }
+        }
+        
+        // Custom cell factory untuk Harga dengan Tab support
+        kolomHarga.cellFactory = Callback {
+            object : TextFieldTableCell<ProdukData, String>() {
+                override fun startEdit() {
+                    super.startEdit()
+                    val tf = graphic as? TextField
+                    tf?.setOnKeyPressed { event ->
+                        if (event.code == javafx.scene.input.KeyCode.TAB) {
+                            commitEdit(tf.text)
+                            event.consume()
+                            // Setelah harga, bisa pindah ke baris berikutnya atau tambah baris baru
+                            val selectedRow = table.selectionModel.selectedIndex
+                            if (selectedRow < detailList.size - 1) {
+                                javafx.application.Platform.runLater {
+                                    table.selectionModel.select(selectedRow + 1)
+                                    table.edit(selectedRow + 1, kolomNama)
+                                }
+                            }
+                        }
+                    }
+                    javafx.application.Platform.runLater { tf?.requestFocus() }
+                }
+            }
+        }
+        
+        // Custom cell factory untuk kolomNama dengan autocomplete smooth
+        kolomNama.cellFactory = Callback {
+            object : TextFieldTableCell<ProdukData, String>() {
+                private var textField: TextField? = null
+
+                override fun startEdit() {
+                    super.startEdit()
+                    currentEditingCell = this
+                    
+                    textField = graphic as? TextField
+                    textField?.let { tf ->
+                        tf.textProperty().addListener { _, _, newValue ->
+                            filterAndShowProduk(newValue)
+                        }
+                        
+                        tf.setOnKeyPressed { event ->
+                            when (event.code) {
+                                javafx.scene.input.KeyCode.TAB -> {
+                                    event.consume()
+                                    if (produkPopup.isShowing && produkListView.items.isNotEmpty()) {
+                                        val selected = produkListView.selectionModel.selectedItem 
+                                            ?: produkListView.items[0]
+                                        applyProdukAndMoveNext(selected)
+                                    } else {
+                                        commitEdit(tf.text)
+                                        moveToNextColumn()
+                                    }
+                                }
+                                javafx.scene.input.KeyCode.ENTER -> {
+                                    if (produkPopup.isShowing && produkListView.items.isNotEmpty()) {
+                                        val selected = produkListView.selectionModel.selectedItem 
+                                            ?: produkListView.items[0]
+                                        applyProdukAndMoveNext(selected)
+                                    } else {
+                                        commitEdit(tf.text)
+                                        moveToNextColumn()
+                                    }
+                                    event.consume()
+                                }
+                                javafx.scene.input.KeyCode.DOWN -> {
+                                    if (produkPopup.isShowing) {
+                                        produkListView.requestFocus()
+                                        if (produkListView.selectionModel.isEmpty) {
+                                            produkListView.selectionModel.selectFirst()
+                                        }
+                                        event.consume()
+                                    }
+                                }
+                                javafx.scene.input.KeyCode.ESCAPE -> {
+                                    produkPopup.hide()
+                                    cancelEdit()
+                                    event.consume()
+                                }
+                                else -> {}
+                            }
+                        }
+                        
+                        // Auto focus
+                        javafx.application.Platform.runLater { tf.requestFocus() }
+                    }
+                }
+
+                override fun cancelEdit() {
+                    super.cancelEdit()
+                    produkPopup.hide()
+                    currentEditingCell = null
+                }
+
+                override fun commitEdit(newValue: String?) {
+                    super.commitEdit(newValue)
+                    produkPopup.hide()
+                    currentEditingCell = null
+                }
+            }
+        }
 
         kolomQty.setOnEditCommit {
             it.rowValue.qtyProperty.set(it.newValue)
@@ -95,6 +213,11 @@ class ProformaController {
         tambahBtn.setOnAction {
             val newProduk = ProdukData(0, "", "", "0", "0", "0")
             detailList.add(newProduk)
+            // Auto edit baris baru
+            javafx.application.Platform.runLater {
+                table.selectionModel.select(detailList.size - 1)
+                table.edit(detailList.size - 1, kolomNama)
+            }
         }
 
         hapusBtn.setOnAction {
@@ -114,6 +237,103 @@ class ProformaController {
         }
         contractDatePicker.valueProperty().addListener { _, _, newDate ->
             tanggalPicker.value = newDate
+        }
+    }
+
+    // ===========================================================
+    // === AUTOCOMPLETE PRODUK (Smooth & Responsive)
+    // ===========================================================
+    private fun setupProdukAutocomplete() {
+        produkListView.cellFactory = Callback {
+            object : ListCell<ProdukData>() {
+                override fun updateItem(item: ProdukData?, empty: Boolean) {
+                    super.updateItem(item, empty)
+                    text = if (empty || item == null) null else item.namaProperty.get()
+                }
+            }
+        }
+        produkPopup.content.add(produkListView)
+        produkListView.prefHeight = 200.0
+        produkListView.prefWidth = 300.0
+
+        // Mouse click - langsung apply dan pindah
+        produkListView.setOnMouseClicked {
+            if (it.clickCount == 1 && produkListView.selectionModel.selectedItem != null) {
+                val selectedProduk = produkListView.selectionModel.selectedItem
+                applyProdukAndMoveNext(selectedProduk)
+            }
+        }
+
+        // Keyboard handler untuk ListView
+        produkListView.setOnKeyPressed { event ->
+            when (event.code) {
+                javafx.scene.input.KeyCode.ENTER, javafx.scene.input.KeyCode.TAB -> {
+                    val selectedProduk = produkListView.selectionModel.selectedItem
+                    if (selectedProduk != null) {
+                        applyProdukAndMoveNext(selectedProduk)
+                    }
+                    event.consume()
+                }
+                javafx.scene.input.KeyCode.ESCAPE -> {
+                    produkPopup.hide()
+                    table.requestFocus()
+                    event.consume()
+                }
+                else -> {}
+            }
+        }
+    }
+
+    private fun filterAndShowProduk(keyword: String) {
+        if (keyword.isEmpty()) {
+            produkPopup.hide()
+            return
+        }
+
+        val filtered = produkList.filter {
+            it.namaProperty.get().contains(keyword, ignoreCase = true)
+        }
+
+        if (filtered.isNotEmpty()) {
+            produkListView.items.setAll(filtered)
+            produkListView.selectionModel.selectFirst()
+            
+            if (!produkPopup.isShowing) {
+                val cell = currentEditingCell
+                if (cell != null) {
+                    val screenBounds: Bounds = cell.localToScreen(cell.boundsInLocal)
+                    produkPopup.show(
+                        cell, 
+                        screenBounds.minX, 
+                        screenBounds.minY + screenBounds.height
+                    )
+                }
+            }
+        } else {
+            produkPopup.hide()
+        }
+    }
+
+    private fun applyProdukAndMoveNext(produk: ProdukData?) {
+        if (produk != null && currentEditingCell != null) {
+            val row = currentEditingCell?.tableRow?.item
+            if (row != null) {
+                row.idProperty.set(produk.idProperty.get())
+                row.namaProperty.set(produk.namaProperty.get())
+                row.uomProperty.set(produk.uomProperty.get())
+                currentEditingCell?.commitEdit(produk.namaProperty.get())
+            }
+        }
+        produkPopup.hide()
+        moveToNextColumn()
+    }
+
+    private fun moveToNextColumn() {
+        val selectedRow = table.selectionModel.selectedIndex
+        if (selectedRow >= 0) {
+            javafx.application.Platform.runLater {
+                table.edit(selectedRow, kolomQty)
+            }
         }
     }
 
@@ -205,7 +425,6 @@ class ProformaController {
         listView.prefWidthProperty().bind(pelangganField.widthProperty())
         listView.prefHeight = 200.0
 
-        // Klik mouse untuk pilih
         listView.setOnMouseClicked { event ->
             if (event.clickCount == 1 && listView.selectionModel.selectedItem != null) {
                 selectCurrent()
@@ -213,88 +432,55 @@ class ProformaController {
             }
         }
 
-        // ✅ Navigasi keyboard di ListView
+        pelangganField.textProperty().addListener { _, _, newValue ->
+            val filtered = pelangganList.filter {
+                it.namaProperty.get().contains(newValue ?: "", ignoreCase = true)
+            }
+            listView.items.setAll(filtered)
+            listView.selectionModel.selectFirst()
+            
+            if (filtered.isNotEmpty()) {
+                val screenBounds: Bounds = pelangganField.localToScreen(pelangganField.boundsInLocal)
+                popup.show(pelangganField, screenBounds.minX, screenBounds.minY + screenBounds.height)
+            } else {
+                popup.hide()
+            }
+        }
+
+        pelangganField.setOnKeyPressed { event ->
+            when (event.code) {
+                javafx.scene.input.KeyCode.DOWN -> {
+                    if (popup.isShowing) {
+                        listView.requestFocus()
+                        if (listView.selectionModel.isEmpty) {
+                            listView.selectionModel.selectFirst()
+                        }
+                    }
+                }
+                javafx.scene.input.KeyCode.TAB, javafx.scene.input.KeyCode.ENTER -> {
+                    if (popup.isShowing && listView.items.isNotEmpty()) {
+                        selectCurrent()
+                        popup.hide()
+                        event.consume()
+                    }
+                }
+                javafx.scene.input.KeyCode.ESCAPE -> popup.hide()
+                else -> {}
+            }
+        }
+
         listView.setOnKeyPressed { event ->
             when (event.code) {
-                javafx.scene.input.KeyCode.ENTER -> {
+                javafx.scene.input.KeyCode.ENTER, javafx.scene.input.KeyCode.TAB -> {
                     selectCurrent()
                     popup.hide()
-                    event.consume()
-                }
-                javafx.scene.input.KeyCode.TAB -> {
-                    selectCurrent()
-                    popup.hide()
+                    pelangganField.parent.requestFocus()
                 }
                 javafx.scene.input.KeyCode.ESCAPE -> {
                     popup.hide()
-                    event.consume()
+                    pelangganField.requestFocus()
                 }
-                else -> {} // biar navigasi panah tetap jalan
-            }
-        }
-
-        // Filter saat mengetik
-        pelangganField.textProperty().addListener { _, _, newValue ->
-            if (newValue.isNullOrBlank()) {
-                popup.hide()
-                selectedPelanggan = null
-                alamatField.clear()
-                teleponField.clear()
-                return@addListener
-            }
-
-            val filtered = pelangganList.filter {
-                it.namaProperty.get().contains(newValue, ignoreCase = true)
-            }
-
-            listView.items.setAll(filtered)
-
-            if (filtered.isEmpty()) {
-                popup.hide()
-            } else {
-                listView.selectionModel.select(0) // ✅ Auto select item pertama
-                if (!popup.isShowing) {
-                    val screenBounds: Bounds = pelangganField.localToScreen(pelangganField.boundsInLocal)
-                    popup.show(pelangganField, screenBounds.minX, screenBounds.minY + screenBounds.height)
-                }
-            }
-        }
-
-        // ✅ Navigasi keyboard di TextField - forward ke ListView
-        pelangganField.setOnKeyPressed { event ->
-            if (popup.isShowing) {
-                when (event.code) {
-                    javafx.scene.input.KeyCode.DOWN, javafx.scene.input.KeyCode.UP,
-                    javafx.scene.input.KeyCode.PAGE_DOWN, javafx.scene.input.KeyCode.PAGE_UP,
-                    javafx.scene.input.KeyCode.HOME, javafx.scene.input.KeyCode.END -> {
-                        // Forward event ke ListView
-                        listView.fireEvent(event.copyFor(listView, listView))
-                        event.consume()
-                    }
-                    javafx.scene.input.KeyCode.ENTER -> {
-                        selectCurrent()
-                        popup.hide()
-                        event.consume()
-                    }
-                    javafx.scene.input.KeyCode.TAB -> {
-                        selectCurrent()
-                        popup.hide()
-                        // Tidak consume biar TAB bisa pindah ke field berikutnya
-                    }
-                    javafx.scene.input.KeyCode.ESCAPE -> {
-                        popup.hide()
-                        event.consume()
-                    }
-                    else -> {}
-                }
-            }
-        }
-
-        // ✅ Saat focus hilang, pilih yang highlighted
-        pelangganField.focusedProperty().addListener { _, _, isFocused ->
-            if (!isFocused && popup.isShowing) {
-                selectCurrent()
-                popup.hide()
+                else -> {}
             }
         }
     }
@@ -304,59 +490,9 @@ class ProformaController {
         if (selected != null) {
             selectedPelanggan = selected
             pelangganField.text = selected.namaProperty.get()
-            pelangganField.positionCaret(pelangganField.text.length) // ✅ Pindah cursor ke akhir
             alamatField.text = selected.alamatProperty.get()
             teleponField.text = selected.teleponProperty.get()
         }
-    }
-
-    // ===========================================================
-    // === AUTOCOMPLETE PRODUK
-    // ===========================================================
-    private fun setupProdukAutocomplete() {
-        produkListView.cellFactory = Callback {
-            object : ListCell<ProdukData>() {
-                override fun updateItem(item: ProdukData?, empty: Boolean) {
-                    super.updateItem(item, empty)
-                    text = if (empty || item == null) null else item.namaProperty.get()
-                }
-            }
-        }
-        produkPopup.content.add(produkListView)
-        produkListView.prefHeight = 180.0
-        produkListView.prefWidth = 300.0
-
-        kolomNama.setOnEditStart { event ->
-        table.selectionModel.select(event.tablePosition.row)        
-        }
-
-        kolomNama.setOnEditCommit { event ->
-            val keyword = event.newValue
-            val filtered = produkList.filter { it.namaProperty.get().contains(keyword, true) }
-            if (filtered.isNotEmpty()) {
-                val screenBounds: Bounds = table.localToScreen(table.boundsInLocal)
-                produkListView.items.setAll(filtered)
-                produkPopup.show(table, screenBounds.minX + 200, screenBounds.minY + 200)
-            } else produkPopup.hide()
-        }
-
-        produkListView.setOnMouseClicked {
-            if (it.clickCount == 1 && produkListView.selectionModel.selectedItem != null) {
-                val selectedProduk = produkListView.selectionModel.selectedItem
-                applyProdukToRow(selectedProduk)
-                produkPopup.hide()
-            }
-        }
-    }
-
-    private fun applyProdukToRow(produk: ProdukData?) {
-        val row = table.selectionModel.selectedItem ?: return
-        if (produk != null) {
-            row.idProperty.set(produk.idProperty.get())
-            row.namaProperty.set(produk.namaProperty.get())
-            row.uomProperty.set(produk.uomProperty.get())
-        }
-        table.refresh()
     }
 
     private fun hitungTotal(item: ProdukData) {
