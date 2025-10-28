@@ -6,14 +6,15 @@ import javafx.fxml.FXMLLoader
 import javafx.scene.Node
 import javafx.scene.Parent
 import javafx.scene.Scene
+import javafx.scene.layout.VBox
 import javafx.scene.control.*
 import javafx.scene.layout.BorderPane
 import javafx.stage.Modality
 import javafx.stage.Stage
 import controller.PelangganController
 import controller.ProdukController
-import ui.PerusahaanTableScreen
-import ui.ProformaScreen
+import controller.PerusahaanTabelController
+import controller.ProformaController
 import ui.InvoiceScreen
 import controller.PerusahaanController
 
@@ -41,9 +42,20 @@ class MainController {
             return
         }
 
-        val perusahaanDetail = ui.PerusahaanTableScreen(idPerusahaanAktif)
-        val content = perusahaanDetail.getView()
-        mainPane.center = content
+        try {
+            val loader = FXMLLoader(javaClass.getResource("/view/PerusahaanTableView.fxml"))
+            val content = loader.load<VBox>()
+            val controller = loader.getController<controller.PerusahaanTabelController>()
+            controller.setPerusahaanId(idPerusahaanAktif) // kirim ID perusahaan aktif
+            mainPane.center = content
+        } catch (e: Exception) {
+            e.printStackTrace()
+            val alert = Alert(Alert.AlertType.ERROR)
+            alert.title = "Kesalahan"
+            alert.headerText = "Gagal membuka detail perusahaan"
+            alert.contentText = e.message
+            alert.showAndWait()
+        }
     }
 
     fun bukaPelanggan(event: ActionEvent) {
@@ -125,8 +137,17 @@ class MainController {
         val result = alert.showAndWait()
         if (result.isPresent) {
             when (result.get()) {
-                btnProforma -> showScreen(ProformaScreen(idPerusahaanAktif).getView())
-                btnInvoice -> showScreen(InvoiceScreen(idPerusahaanAktif).getView())
+                btnProforma -> {
+                    val loader = FXMLLoader(javaClass.getResource("/view/Proforma.fxml"))
+                    val view = loader.load<VBox>()
+                    val controller = loader.getController<controller.ProformaController>()
+                    controller.setIdPerusahaan(idPerusahaanAktif)
+                    showScreen(view)
+                }
+                btnInvoice -> {
+                    // sementara tetap pakai yang lama, nanti bisa kamu ubah juga kalau Invoice dipisah ke FXML
+                    showScreen(InvoiceScreen(idPerusahaanAktif).getView())
+                }
                 btnBatal -> return
             }
         }

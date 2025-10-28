@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.image.ImageView?>
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.layout.*?>
+
+<VBox xmlns:fx="http://javafx.com/fxml"
+      fx:controller="controller.PerusahaanTabelController"
+      spacing="15.0">
+    <padding>
+        <Insets top="15" right="15" bottom="15" left="15"/>
+    </padding>
+
+    <GridPane hgap="10" vgap="10">
+        <padding>
+            <Insets top="10" right="10" bottom="10" left="10"/>
+        </padding>
+
+        <Label text="Nama" GridPane.rowIndex="0" GridPane.columnIndex="0"/>
+        <TextField fx:id="namaField" GridPane.rowIndex="0" GridPane.columnIndex="1"/>
+
+        <Label text="Alamat" GridPane.rowIndex="1" GridPane.columnIndex="0"/>
+        <TextArea fx:id="alamatField" prefRowCount="3" GridPane.rowIndex="1" GridPane.columnIndex="1"/>
+
+        <Label text="Telepon" GridPane.rowIndex="2" GridPane.columnIndex="0"/>
+        <TextField fx:id="teleponField" GridPane.rowIndex="2" GridPane.columnIndex="1"/>
+
+        <Label text="Fax" GridPane.rowIndex="3" GridPane.columnIndex="0"/>
+        <TextField fx:id="faxField" GridPane.rowIndex="3" GridPane.columnIndex="1"/>
+
+        <Label text="HP" GridPane.rowIndex="4" GridPane.columnIndex="0"/>
+        <TextField fx:id="hpField" GridPane.rowIndex="4" GridPane.columnIndex="1"/>
+
+        <Label text="No. Rekening" GridPane.rowIndex="5" GridPane.columnIndex="0"/>
+        <TextField fx:id="noRekField" GridPane.rowIndex="5" GridPane.columnIndex="1"/>
+
+        <Label text="Nama Bank" GridPane.rowIndex="6" GridPane.columnIndex="0"/>
+        <TextField fx:id="namaBankField" GridPane.rowIndex="6" GridPane.columnIndex="1"/>
+
+        <Label text="Lokasi Kantor Bank" GridPane.rowIndex="7" GridPane.columnIndex="0"/>
+        <TextField fx:id="lokasiBankField" GridPane.rowIndex="7" GridPane.columnIndex="1"/>
+
+        <Label text="Nama Pemilik" GridPane.rowIndex="8" GridPane.columnIndex="0"/>
+        <TextField fx:id="namaPemilikField" GridPane.rowIndex="8" GridPane.columnIndex="1"/>
+
+        <Label text="Jabatan Pemilik" GridPane.rowIndex="9" GridPane.columnIndex="0"/>
+        <TextField fx:id="jabatanPemilikField" GridPane.rowIndex="9" GridPane.columnIndex="1"/>
+
+        <Button fx:id="gantiLogoBtn" text="Ganti Logo" GridPane.rowIndex="10" GridPane.columnIndex="1"/>
+        <ImageView fx:id="logoView" fitHeight="100" preserveRatio="true"
+                   GridPane.rowIndex="11" GridPane.columnIndex="1"/>
+    </GridPane>
+
+    <HBox spacing="10">
+        <Button fx:id="simpanBtn" text="Simpan Perubahan" onAction="#simpanData"/>
+        <Button fx:id="hapusBtn" text="Hapus Perusahaan" onAction="#hapusData"/>
+    </HBox>
+</VBox>
