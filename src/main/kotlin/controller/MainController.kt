@@ -15,7 +15,6 @@ import controller.PelangganController
 import controller.ProdukController
 import controller.PerusahaanTabelController
 import controller.ProformaController
-import ui.InvoiceScreen
 import controller.PerusahaanController
 
 class MainController {
@@ -145,8 +144,11 @@ class MainController {
                     showScreen(view)
                 }
                 btnInvoice -> {
-                    // sementara tetap pakai yang lama, nanti bisa kamu ubah juga kalau Invoice dipisah ke FXML
-                    showScreen(InvoiceScreen(idPerusahaanAktif).getView())
+                    val loader = FXMLLoader(javaClass.getResource("/view/Invoice.fxml"))
+                    val view = loader.load<VBox>()
+                    val controller = loader.getController<controller.InvoiceController>()
+                    controller.setIdPerusahaan(idPerusahaanAktif)
+                    showScreen(view)
                 }
                 btnBatal -> return
             }
@@ -196,5 +198,10 @@ class MainController {
             alert.contentText = e.message
             alert.showAndWait()
         }
+    }
+
+    fun bukaPengaturan(event: ActionEvent) {
+        // Mengarahkan ke halaman detail perusahaan yang sedang aktif, sama seperti menu "Data" -> "Perusahaan"
+        bukaPerusahaan(event)
     }
 }

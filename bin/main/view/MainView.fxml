@@ -18,6 +18,7 @@
                 <Menu text="Laporan">
                     <MenuItem text="Laporan Penjualan" onAction="#bukaLaporan"/>
                 </Menu>
+                <Menu text="Pengaturan" onAction="#bukaPengaturan" />
             </MenuBar>
 
             <!-- Tombol di bawah menu bar, rata kanan -->

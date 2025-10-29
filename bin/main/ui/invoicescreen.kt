@@ -13,6 +13,7 @@ import javafx.stage.Popup
 import javafx.util.Callback
 import model.PelangganData
 import utils.DatabaseHelper
+import java.text.NumberFormat
 import java.sql.*
 
 class InvoiceScreen(private val idPerusahaan: Int) {
@@ -22,6 +23,13 @@ class InvoiceScreen(private val idPerusahaan: Int) {
     
     private val popup = Popup()
     private val listView = ListView<PelangganData>()
+
+    // Komponen untuk PPN dan Total
+    private val txtSubtotal = TextField("0.00").apply { isEditable = false }
+    private val txtPpn = TextField("11") // Default PPN 11%
+    private val txtPpnAmount = TextField("0.00").apply { isEditable = false }
+    private val txtGrandTotal = TextField("0.00").apply { isEditable = false }
+    private val tableItems = FXCollections.observableArrayList<Map<String, Any>>() // Ganti dengan model jika ada
     
     private var selectedPelanggan: PelangganData? = null
 
@@ -150,14 +158,34 @@ class InvoiceScreen(private val idPerusahaan: Int) {
             }
         }
 
-        val lblTotal = Label("Total:")
-        val txtTotal = TextField()
-        txtTotal.isEditable = false
+        // Listener untuk kalkulasi otomatis
+        txtPpn.textProperty().addListener { _, _, _ -> updateTotals() }
 
         grid.addRow(0, lblNo, txtNo, lblTanggal, dpTanggal)
         grid.addRow(1, lblPelanggan, pelangganField)
-        grid.addRow(2, lblTotal, txtTotal)
+        
+        // Placeholder untuk TableView
+        val itemTable = TableView<Map<String, Any>>() // Ganti dengan TableView<ItemModel>
+        itemTable.minHeight = 200.0
+        itemTable.isEditable = true
+        // TODO: Definisikan kolom-kolom tabel (Nama, Qty, Harga, Total) dan tambahkan listener
+        // Saat item di tabel berubah, panggil updateTotals()
 
+        // Layout untuk total
+        val totalGrid = GridPane().apply {
+            hgap = 10.0
+            vgap = 5.0
+            padding = Insets(10.0, 0.0, 10.0, 0.0)
+            add(Label("Subtotal:"), 0, 0)
+            add(txtSubtotal, 1, 0)
+            add(Label("PPN (%):"), 0, 1)
+            add(txtPpn, 1, 1)
+            add(Label("PPN Amount:"), 0, 2)
+            add(txtPpnAmount, 1, 2)
+            add(Label("Grand Total:"), 0, 3)
+            add(txtGrandTotal, 1, 3)
+        }
+        
         val btnSimpan = Button("Simpan")
         val btnHapus = Button("Hapus")
         val btnKembali = Button("Kembali ke Halaman Utama")
@@ -165,8 +193,21 @@ class InvoiceScreen(private val idPerusahaan: Int) {
         val tombolBox = HBox(10.0, btnSimpan, btnHapus, btnKembali)
         tombolBox.padding = Insets(10.0, 0.0, 0.0, 0.0)
 
-        root.children.addAll(title, grid, tombolBox)
+        root.children.addAll(title, grid, itemTable, totalGrid, tombolBox)
         return root
+    }
+
+    private fun updateTotals() {
+        // Ganti ini dengan kalkulasi dari item di tabel Anda
+        val subtotal = tableItems.sumOf { (it["qty"] as? Double ?: 0.0) * (it["harga"] as? Double ?: 0.0) }
+        
+        val ppnRate = txtPpn.text.toDoubleOrNull() ?: 0.0
+        val ppnAmount = subtotal * (ppnRate / 100.0)
+        val grandTotal = subtotal + ppnAmount
+
+        txtSubtotal.text = String.format("%,.2f", subtotal)
+        txtPpnAmount.text = String.format("%,.2f", ppnAmount)
+        txtGrandTotal.text = String.format("%,.2f", grandTotal)
     }
 
     private fun selectCurrent() {

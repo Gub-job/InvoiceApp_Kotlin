@@ -1,5 +1,6 @@
 package controller
 
+import javafx.beans.binding.Bindings
 import javafx.collections.FXCollections
 import javafx.fxml.FXML
 import javafx.geometry.Bounds
@@ -34,6 +35,11 @@ class ProformaController {
     @FXML private lateinit var konversiBtn: Button
     @FXML private lateinit var hapusBtn: Button
     @FXML private lateinit var tambahBtn: Button
+    // Tambahkan @FXML untuk komponen PPN dari FXML
+    @FXML private lateinit var ppnField: TextField
+    @FXML private lateinit var subtotalLabel: Label
+    @FXML private lateinit var ppnAmountLabel: Label
+    @FXML private lateinit var grandTotalLabel: Label
 
     private val pelangganList = FXCollections.observableArrayList<PelangganData>()
     private val produkList = FXCollections.observableArrayList<ProdukData>()
@@ -191,11 +197,13 @@ class ProformaController {
 
         kolomQty.setOnEditCommit {
             it.rowValue.qtyProperty.set(it.newValue)
-            hitungTotal(it.rowValue)
+            hitungTotalBaris(it.rowValue)
+            updateTotals()
         }
         kolomHarga.setOnEditCommit {
             it.rowValue.hargaProperty.set(it.newValue)
-            hitungTotal(it.rowValue)
+            hitungTotalBaris(it.rowValue)
+            updateTotals()
         }
 
         kolomNo.setCellFactory {
@@ -211,6 +219,7 @@ class ProformaController {
         setupProdukAutocomplete()
 
         tambahBtn.setOnAction {
+            // Tambah baris kosong baru
             val newProduk = ProdukData(0, "", "", "0", "0", "0")
             detailList.add(newProduk)
             // Auto edit baris baru
@@ -225,6 +234,7 @@ class ProformaController {
             if (selected != null) {
                 detailList.remove(selected)
                 hapusDetailDariDB(selected)
+                updateTotals()
             }
         }
 
@@ -237,6 +247,11 @@ class ProformaController {
         }
         contractDatePicker.valueProperty().addListener { _, _, newDate ->
             tanggalPicker.value = newDate
+        }
+
+        // Listener untuk PPN
+        ppnField.textProperty().addListener { _, _, _ ->
+            updateTotals()
         }
     }
 
@@ -346,8 +361,8 @@ class ProformaController {
         try {
             val stmt = conn.prepareStatement(
                 """
-                INSERT INTO proforma (id_perusahaan, id_pelanggan, nomor, tanggal, dp)
-                VALUES (?, ?, ?, ?, ?)
+                INSERT INTO proforma (id_perusahaan, id_pelanggan, nomor, tanggal, dp, tax)
+                VALUES (?, ?, ?, ?, ?, ?)
                 """,
                 Statement.RETURN_GENERATED_KEYS
             )
@@ -356,6 +371,7 @@ class ProformaController {
             stmt.setString(3, nomorField.text)
             stmt.setString(4, tanggalPicker.value?.toString() ?: LocalDate.now().toString())
             stmt.setDouble(5, dpField.text.toDoubleOrNull() ?: 0.0)
+            stmt.setDouble(6, ppnField.text.toDoubleOrNull() ?: 0.0) // Simpan PPN
             stmt.executeUpdate()
 
             val rs = stmt.generatedKeys
@@ -495,16 +511,34 @@ class ProformaController {
         }
     }
 
-    private fun hitungTotal(item: ProdukData) {
+    private fun hitungTotalBaris(item: ProdukData) {
         try {
             val qty = item.qtyProperty.get().toDoubleOrNull() ?: 0.0
             val harga = item.hargaProperty.get().toDoubleOrNull() ?: 0.0
             val total = qty * harga
-            item.totalProperty.set(String.format("%,.2f", total))
+            item.totalProperty.set(total.toString()) // Simpan sebagai angka, format nanti
         } catch (e: Exception) {
             item.totalProperty.set("0")
         }
         table.refresh()
+    }
+
+    private fun updateTotals() {
+        val subtotal = detailList.sumOf { it.totalProperty.get().toDoubleOrNull() ?: 0.0 }
+        val ppnRate = ppnField.text.toDoubleOrNull() ?: 0.0
+        val ppnAmount = subtotal * (ppnRate / 100.0)
+        val grandTotal = subtotal + ppnAmount
+
+        subtotalLabel.text = String.format("%,.2f", subtotal)
+        ppnAmountLabel.text = String.format("%,.2f", ppnAmount)
+        grandTotalLabel.text = String.format("%,.2f", grandTotal)
+
+        // Format kolom total di tabel
+        table.columns.firstOrNull()?.let {
+            // Hack kecil untuk refresh formatting
+            it.isVisible = false
+            it.isVisible = true
+        }
     }
 
     private fun loadPelanggan() {
