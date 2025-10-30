@@ -220,7 +220,7 @@ class ProformaController {
 
         tambahBtn.setOnAction {
             // Tambah baris kosong baru
-            val newProduk = ProdukData(0, "", "", "0", "0", "0")
+            val newProduk = ProdukData(0, "", "", "")
             detailList.add(newProduk)
             // Auto edit baris baru
             javafx.application.Platform.runLater {
@@ -336,6 +336,7 @@ class ProformaController {
                 row.idProperty.set(produk.idProperty.get())
                 row.namaProperty.set(produk.namaProperty.get())
                 row.uomProperty.set(produk.uomProperty.get())
+                row.divisiProperty.set(produk.divisiProperty.get())
                 currentEditingCell?.commitEdit(produk.namaProperty.get())
             }
         }
@@ -561,7 +562,7 @@ class ProformaController {
 
     private fun loadProduk() {
         val conn = DatabaseHelper.getConnection()
-        val stmt = conn.prepareStatement("SELECT * FROM produk WHERE id_perusahaan = ?")
+        val stmt = conn.prepareStatement("SELECT id_produk, nama_produk, uom, divisi FROM produk WHERE id_perusahaan = ?")
         stmt.setInt(1, idPerusahaan)
         val rs = stmt.executeQuery()
         while (rs.next()) {
@@ -569,7 +570,8 @@ class ProformaController {
                 ProdukData(
                     rs.getInt("id_produk"),
                     rs.getString("nama_produk"),
-                    rs.getString("uom")
+                    rs.getString("uom"),
+                    rs.getString("divisi")
                 )
             )
         }

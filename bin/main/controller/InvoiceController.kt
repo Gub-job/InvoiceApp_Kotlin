@@ -169,7 +169,7 @@ class InvoiceController {
         setupProdukAutocomplete()
 
         tambahBtn.setOnAction {
-            val newProduk = ProdukData(0, "", "", "0", "0", "0")
+            val newProduk = ProdukData(0, "", "", "")
             detailList.add(newProduk)
             javafx.application.Platform.runLater {
                 table.selectionModel.select(detailList.size - 1)
@@ -275,6 +275,7 @@ class InvoiceController {
                 row.idProperty.set(produk.idProperty.get())
                 row.namaProperty.set(produk.namaProperty.get())
                 row.uomProperty.set(produk.uomProperty.get())
+                row.divisiProperty.set(produk.divisiProperty.get())
                 currentEditingCell?.commitEdit(produk.namaProperty.get())
             }
         }
@@ -480,7 +481,7 @@ class InvoiceController {
 
     private fun loadProduk() {
         val conn = DatabaseHelper.getConnection()
-        val stmt = conn.prepareStatement("SELECT * FROM produk WHERE id_perusahaan = ?")
+        val stmt = conn.prepareStatement("SELECT id_produk, nama_produk, uom, divisi FROM produk WHERE id_perusahaan = ?")
         stmt.setInt(1, idPerusahaan)
         val rs = stmt.executeQuery()
         while (rs.next()) {
@@ -488,7 +489,8 @@ class InvoiceController {
                 ProdukData(
                     rs.getInt("id_produk"),
                     rs.getString("nama_produk"),
-                    rs.getString("uom")
+                    rs.getString("uom"),
+                    rs.getString("divisi")
                 )
             )
         }

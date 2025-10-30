@@ -4,9 +4,12 @@
 <?import javafx.geometry.*?>
 
 <BorderPane fx:id="mainPane" xmlns:fx="http://javafx.com/fxml" fx:controller="controller.MainController">
+
+    <!-- ======= BAGIAN ATAS ======= -->
     <top>
-        <VBox>
-            <MenuBar>
+        <VBox spacing="0">
+            <!-- MENU BAR UTAMA -->
+            <MenuBar style="-fx-background-color: #BDC3C7;">
                 <Menu text="Data">
                     <MenuItem text="Pelanggan" onAction="#bukaPelanggan"/>
                     <MenuItem text="Produk" onAction="#bukaProduk"/>
@@ -18,19 +21,45 @@
                 <Menu text="Laporan">
                     <MenuItem text="Laporan Penjualan" onAction="#bukaLaporan"/>
                 </Menu>
-                <Menu text="Pengaturan" onAction="#bukaPengaturan" />
             </MenuBar>
 
-            <!-- Tombol di bawah menu bar, rata kanan -->
-            <HBox alignment="CENTER_RIGHT" spacing="10" style="-fx-padding: 5 10 5 10;">
-                <Button text="Kembali ke Halaman Utama" onAction="#onKembaliClicked" />
-                <Button text="Ganti Perusahaan" onAction="#onGantiPerusahaanClicked" />
+            <!-- NAVIGASI UTAMA -->
+            <HBox alignment="CENTER_LEFT" spacing="10"
+                  style="-fx-background-color: #34495E; -fx-padding: 8 15;">
+
+                <Button text="🏠 Halaman Utama"
+                        onAction="#onKembaliClicked"
+                        style="-fx-background-color: #1ABC9C; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 5;"/>
+
+                <Button text="⚙ Pengaturan"
+                        onAction="#bukaPengaturan"
+                        style="-fx-background-color: #3498DB; -fx-text-fill: white;
+                            -fx-font-weight: bold; -fx-background-radius: 5;"/>
+
+                <Region HBox.hgrow="ALWAYS"/> <!-- Spacer -->
+
+                <Button text="🔄 Ganti Perusahaan"
+                        onAction="#onGantiPerusahaanClicked"
+                        style="-fx-background-color: #E67E22; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 5;"/>
             </HBox>
         </VBox>
     </top>
 
+    <!-- ======= BAGIAN TENGAH ======= -->
     <center>
-        <Label text="Selamat datang di Invoqr"
-               style="-fx-font-size: 16px; -fx-padding: 20;" />
+        <VBox alignment="CENTER" spacing="10">
+            <Label text="Selamat datang di Invoqr"
+                   style="-fx-font-size: 20px; -fx-font-weight: bold; -fx-text-fill: #2C3E50;" />
+            <Label text="Silakan pilih menu di atas untuk memulai"
+                   style="-fx-font-size: 14px; -fx-text-fill: #7F8C8D;" />
+        </VBox>
     </center>
+
+    <!-- ======= (OPSIONAL) BAGIAN BAWAH ======= -->
+    <bottom>
+        <HBox alignment="CENTER_RIGHT" style="-fx-background-color: #ECF0F1; -fx-padding: 5 15;">
+            <Label text="Invoqr App © 2025"
+                   style="-fx-font-size: 12px; -fx-text-fill: #7F8C8D;"/>
+        </HBox>
+    </bottom>
 </BorderPane>

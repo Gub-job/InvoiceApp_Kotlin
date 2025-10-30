@@ -201,7 +201,42 @@ class MainController {
     }
 
     fun bukaPengaturan(event: ActionEvent) {
-        // Mengarahkan ke halaman detail perusahaan yang sedang aktif, sama seperti menu "Data" -> "Perusahaan"
-        bukaPerusahaan(event)
+        if (idPerusahaanAktif == 0) {
+            val alert = Alert(Alert.AlertType.WARNING)
+            alert.title = "Peringatan"
+            alert.headerText = null
+            alert.contentText = "Belum ada perusahaan dipilih. Silakan pilih perusahaan terlebih dahulu."
+            alert.showAndWait()
+            return
+        }
+
+        try {
+            println("DEBUG: Memulai bukaPengaturan...")
+            val resourceUrl = javaClass.getResource("/view/PengaturanView.fxml")
+            println("DEBUG: Mencari resource di '/view/PengaturanView.fxml'. Hasil: $resourceUrl")
+
+            if (resourceUrl == null) {
+                showAlert(Alert.AlertType.ERROR, "Resource Error", "File FXML '/view/PengaturanView.fxml' tidak dapat ditemukan di classpath.")
+                return
+            }
+
+            val loader = FXMLLoader(resourceUrl)
+            val content = loader.load<VBox>()
+            println("DEBUG: FXML berhasil di-load.")
+            val controller = loader.getController<PengaturanController>()
+            controller.setPerusahaanId(idPerusahaanAktif)
+            mainPane.center = content
+        } catch (e: Exception) {
+            e.printStackTrace()
+            showAlert(Alert.AlertType.ERROR, "Error", "Gagal membuka halaman pengaturan: ${e.message}")
+        }
+    }
+
+    private fun showAlert(type: Alert.AlertType, title: String, message: String) {
+        val alert = Alert(type)
+        alert.title = title
+        alert.headerText = null
+        alert.contentText = message
+        alert.showAndWait()
     }
 }

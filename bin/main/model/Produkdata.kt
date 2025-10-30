@@ -9,7 +9,8 @@ class ProdukData(
     uom: String,
     qty: String = "",
     harga: String = "",
-    total: String = ""
+    total: String = "",
+    divisi: String = ""
 ) {
     val idProperty = SimpleIntegerProperty(id)
     val namaProperty = SimpleStringProperty(nama)
@@ -17,4 +18,5 @@ class ProdukData(
     val qtyProperty = SimpleStringProperty(qty)
     val hargaProperty = SimpleStringProperty(harga)
     val totalProperty = SimpleStringProperty(total)
+    val divisiProperty = SimpleStringProperty(divisi)
 }
