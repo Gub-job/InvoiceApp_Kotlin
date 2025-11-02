@@ -15,7 +15,8 @@ class ProdukController {
 
     @FXML private lateinit var table: TableView<ProdukData>
     @FXML private lateinit var kolomNama: TableColumn<ProdukData, String>
-    @FXML private lateinit var kolomDivisi: TableColumn<ProdukData, String> // Tambahkan kolom divisi
+    @FXML private lateinit var kolomSingkatan: TableColumn<ProdukData, String>
+    @FXML private lateinit var kolomDivisi: TableColumn<ProdukData, String>
     @FXML private lateinit var kolomUom: TableColumn<ProdukData, String>
     @FXML private lateinit var btnTambah: Button
     @FXML private lateinit var btnEdit: Button
@@ -36,7 +37,8 @@ class ProdukController {
     @FXML
     fun initialize() {
         kolomNama.setCellValueFactory { it.value.namaProperty }
-        kolomDivisi.setCellValueFactory { it.value.divisiProperty } // Hubungkan data ke kolom
+        kolomSingkatan.setCellValueFactory { it.value.singkatanProperty }
+        kolomDivisi.setCellValueFactory { it.value.divisiProperty }
         kolomUom.setCellValueFactory { it.value.uomProperty }
 
         table.items = dataList
@@ -93,29 +95,54 @@ class ProdukController {
     }
 
     private fun loadData() {
-    dataList.clear()
-    val conn = DatabaseHelper.getConnection()
-    val query = "SELECT id_produk, nama_produk, uom, divisi FROM produk WHERE id_perusahaan = ?"
-    val ps = conn.prepareStatement(query)
-    ps.setInt(1, idPerusahaan)
-    val rs = ps.executeQuery()
+        dataList.clear()
+        val conn = DatabaseHelper.getConnection()
+        
+        // Cek dan tambahkan kolom singkatan jika belum ada
+        ensureSingkatanProdukColumnExists(conn)
+        
+        val query = "SELECT id_produk, nama_produk, uom, divisi, singkatan FROM produk WHERE id_perusahaan = ?"
+        val ps = conn.prepareStatement(query)
+        ps.setInt(1, idPerusahaan)
+        val rs = ps.executeQuery()
 
-    while (rs.next()) {
-        dataList.add(
-            ProdukData(
-                id = rs.getInt("id_produk"),
-                nama = rs.getString("nama_produk"),
-                uom = rs.getString("uom"),
-                divisi = rs.getString("divisi")
+        while (rs.next()) {
+            dataList.add(
+                ProdukData(
+                    id = rs.getInt("id_produk"),
+                    nama = rs.getString("nama_produk"),
+                    uom = rs.getString("uom"),
+                    divisi = rs.getString("divisi"),
+                    singkatan = rs.getString("singkatan") ?: ""
+                )
             )
-        )
-    }
+        }
 
-    ps.close()
-    conn.close()
-    table.items = dataList
-    table.refresh()
-}
+        ps.close()
+        conn.close()
+        table.items = dataList
+        table.refresh()
+    }
+    
+    private fun ensureSingkatanProdukColumnExists(conn: java.sql.Connection) {
+        try {
+            val checkStmt = conn.prepareStatement("""
+                SELECT COUNT(*) as count FROM pragma_table_info('produk') 
+                WHERE name = 'singkatan'
+            """)
+            val rs = checkStmt.executeQuery()
+            rs.next()
+            val columnExists = rs.getInt("count") > 0
+            
+            if (!columnExists) {
+                val alterStmt = conn.prepareStatement("ALTER TABLE produk ADD COLUMN singkatan TEXT")
+                alterStmt.executeUpdate()
+                println("Kolom singkatan berhasil ditambahkan ke tabel produk")
+            }
+        } catch (e: Exception) {
+            println("Error saat menambahkan kolom singkatan produk: ${e.message}")
+        }
+    }
 
 
     private fun showFormDialog(title: String, data: ProdukData?) {
@@ -128,21 +155,24 @@ class ProdukController {
         }
 
         val txtNama = TextField(data?.namaProperty?.value ?: "")
+        val txtSingkatan = TextField(data?.singkatanProperty?.value ?: "")
         val txtUom = TextField(data?.uomProperty?.value ?: "")
-        val txtDivisi = TextField(data?.divisiProperty?.value ?: "") // Field untuk divisi
+        val txtDivisi = TextField(data?.divisiProperty?.value ?: "")
 
         grid.add(Label("Nama Produk:"), 0, 0)
         grid.add(txtNama, 1, 0)
-        grid.add(Label("Divisi:"), 0, 1)
-        grid.add(txtDivisi, 1, 1)
-        grid.add(Label("Satuan (UOM):"), 0, 2)
-        grid.add(txtUom, 1, 2)
+        grid.add(Label("Singkatan:"), 0, 1)
+        grid.add(txtSingkatan, 1, 1)
+        grid.add(Label("Divisi:"), 0, 2)
+        grid.add(txtDivisi, 1, 2)
+        grid.add(Label("Satuan (UOM):"), 0, 3)
+        grid.add(txtUom, 1, 3)
 
         val btnSimpan = Button("Simpan")
         val btnBatal = Button("Batal")
 
         val tombolBox = HBox(10.0, btnBatal, btnSimpan).apply { alignment = javafx.geometry.Pos.CENTER_RIGHT }
-        grid.add(tombolBox, 1, 3) // Pindahkan ke baris 3
+        grid.add(tombolBox, 1, 4)
 
         btnBatal.setOnAction { dialog.close() }
         btnSimpan.setOnAction {
@@ -152,9 +182,9 @@ class ProdukController {
             }
 
             if (data == null) // Tambah baru
-                simpanProdukBaru(txtNama.text, txtUom.text, txtDivisi.text)
+                simpanProdukBaru(txtNama.text, txtSingkatan.text, txtUom.text, txtDivisi.text)
             else // Edit
-                updateProduk(data.idProperty.value, txtNama.text, txtUom.text, txtDivisi.text)
+                updateProduk(data.idProperty.value, txtNama.text, txtSingkatan.text, txtUom.text, txtDivisi.text)
 
             dialog.close()
             loadData() // SELALU panggil loadData() setelah perubahan
@@ -166,14 +196,16 @@ class ProdukController {
         dialog.show()
     }
 
-    private fun simpanProdukBaru(nama: String, uom: String, divisi: String) {
+    private fun simpanProdukBaru(nama: String, singkatan: String, uom: String, divisi: String) {
         val conn = DatabaseHelper.getConnection()
         try {
-            val ps = conn.prepareStatement("INSERT INTO produk (nama_produk, uom, divisi, id_perusahaan) VALUES (?, ?, ?, ?)")
+            ensureSingkatanProdukColumnExists(conn)
+            val ps = conn.prepareStatement("INSERT INTO produk (nama_produk, singkatan, uom, divisi, id_perusahaan) VALUES (?, ?, ?, ?, ?)")
             ps.setString(1, nama.trim())
-            ps.setString(2, uom.trim())
-            ps.setString(3, divisi.trim())
-            ps.setInt(4, idPerusahaan)
+            ps.setString(2, singkatan.trim().uppercase())
+            ps.setString(3, uom.trim())
+            ps.setString(4, divisi.trim())
+            ps.setInt(5, idPerusahaan)
             ps.executeUpdate()
             ps.close()
         } finally {
@@ -181,14 +213,16 @@ class ProdukController {
         }
     }
 
-    private fun updateProduk(id: Int, nama: String, uom: String, divisi: String) {
+    private fun updateProduk(id: Int, nama: String, singkatan: String, uom: String, divisi: String) {
         val conn = DatabaseHelper.getConnection()
         try {
-            val ps = conn.prepareStatement("UPDATE produk SET nama_produk = ?, uom = ?, divisi = ? WHERE id_produk = ?")
+            ensureSingkatanProdukColumnExists(conn)
+            val ps = conn.prepareStatement("UPDATE produk SET nama_produk = ?, singkatan = ?, uom = ?, divisi = ? WHERE id_produk = ?")
             ps.setString(1, nama.trim())
-            ps.setString(2, uom.trim())
-            ps.setString(3, divisi.trim())
-            ps.setInt(4, id)
+            ps.setString(2, singkatan.trim().uppercase())
+            ps.setString(3, uom.trim())
+            ps.setString(4, divisi.trim())
+            ps.setInt(5, id)
             ps.executeUpdate()
             ps.close()
         } finally {
