@@ -10,7 +10,8 @@
     <center>
         <TableView fx:id="table" prefHeight="400.0" prefWidth="600.0">
             <columns>
-                <TableColumn fx:id="kolomNama" text="Nama Produk" prefWidth="250.0"/>
+                <TableColumn fx:id="kolomNama" text="Nama Produk" prefWidth="200.0"/>
+                <TableColumn fx:id="kolomSingkatan" text="Singkatan" prefWidth="100.0"/>
                 <TableColumn fx:id="kolomDivisi" text="Divisi" prefWidth="150.0"/>
                 <TableColumn fx:id="kolomUom" text="Satuan (UOM)" prefWidth="150.0"/>
             </columns>

@@ -63,8 +63,8 @@
             <TableColumn fx:id="kolomNama" text="Nama Barang" prefWidth="200"/>
             <TableColumn fx:id="kolomQty" text="Qty" prefWidth="80"/>
             <TableColumn fx:id="kolomUom" text="UOM" prefWidth="80"/>
-            <TableColumn fx:id="kolomHarga" text="Harga" prefWidth="100"/>
-            <TableColumn fx:id="kolomTotal" text="Total" prefWidth="120"/>
+            <TableColumn fx:id="kolomHarga" text="Unit Price" prefWidth="100"/>
+            <TableColumn fx:id="kolomTotal" text="Amount" prefWidth="120"/>
         </columns>
     </TableView>
 

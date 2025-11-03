@@ -10,6 +10,7 @@ import javafx.util.Callback
 import model.PelangganData
 import model.ProdukData
 import utils.DatabaseHelper
+import utils.NomorGenerator
 import java.sql.Statement
 import java.time.LocalDate
 
@@ -55,6 +56,10 @@ class InvoiceController {
         idPerusahaan = id
         loadPelanggan()
         loadProduk()
+        // Kosongkan nomor field, akan diisi setelah produk ditambahkan
+        nomorField.text = ""
+        // Set tanggal hari ini
+        tanggalPicker.value = LocalDate.now()
     }
 
     @FXML
@@ -197,6 +202,11 @@ class InvoiceController {
         ppnField.textProperty().addListener { _, _, _ ->
             updateTotals()
         }
+        
+        // Listener untuk tanggal - update nomor jika sudah ada produk
+        tanggalPicker.valueProperty().addListener { _, _, newDate ->
+            updateNomorIfReady()
+        }
     }
 
     private fun setupProdukAutocomplete() {
@@ -276,11 +286,32 @@ class InvoiceController {
                 row.namaProperty.set(produk.namaProperty.get())
                 row.uomProperty.set(produk.uomProperty.get())
                 row.divisiProperty.set(produk.divisiProperty.get())
+                row.singkatanProperty.set(produk.singkatanProperty.get())
                 currentEditingCell?.commitEdit(produk.namaProperty.get())
+                
+                // Update nomor setelah produk ditambahkan
+                updateNomorIfReady()
             }
         }
         produkPopup.hide()
         moveToNextColumn()
+    }
+    
+    private fun updateNomorIfReady() {
+        // Generate nomor hanya jika ada produk dan tanggal sudah dipilih
+        if (detailList.isNotEmpty() && tanggalPicker.value != null) {
+            val firstProduct = detailList.firstOrNull()
+            if (firstProduct != null && !firstProduct.namaProperty.get().isBlank()) {
+                nomorField.text = NomorGenerator.generateNomor(
+                    idPerusahaan,
+                    "invoice",
+                    firstProduct.divisiProperty.get(),
+                    firstProduct.namaProperty.get(),
+                    firstProduct.singkatanProperty.get(),
+                    tanggalPicker.value
+                )
+            }
+        }
     }
 
     private fun moveToNextColumn() {
@@ -481,7 +512,26 @@ class InvoiceController {
 
     private fun loadProduk() {
         val conn = DatabaseHelper.getConnection()
-        val stmt = conn.prepareStatement("SELECT id_produk, nama_produk, uom, divisi FROM produk WHERE id_perusahaan = ?")
+        
+        // Cek dan tambahkan kolom singkatan jika belum ada
+        try {
+            val checkStmt = conn.prepareStatement("""
+                SELECT COUNT(*) as count FROM pragma_table_info('produk') 
+                WHERE name = 'singkatan'
+            """)
+            val rs = checkStmt.executeQuery()
+            rs.next()
+            val columnExists = rs.getInt("count") > 0
+            
+            if (!columnExists) {
+                val alterStmt = conn.prepareStatement("ALTER TABLE produk ADD COLUMN singkatan TEXT")
+                alterStmt.executeUpdate()
+            }
+        } catch (e: Exception) {
+            // Ignore error, kolom mungkin sudah ada
+        }
+        
+        val stmt = conn.prepareStatement("SELECT id_produk, nama_produk, uom, divisi, singkatan FROM produk WHERE id_perusahaan = ?")
         stmt.setInt(1, idPerusahaan)
         val rs = stmt.executeQuery()
         while (rs.next()) {
@@ -490,7 +540,8 @@ class InvoiceController {
                     rs.getInt("id_produk"),
                     rs.getString("nama_produk"),
                     rs.getString("uom"),
-                    rs.getString("divisi")
+                    divisi = rs.getString("divisi"),
+                    singkatan = rs.getString("singkatan") ?: ""
                 )
             )
         }

@@ -38,6 +38,7 @@ class ProformaController {
     // Tambahkan @FXML untuk komponen PPN dari FXML
     @FXML private lateinit var ppnField: TextField
     @FXML private lateinit var subtotalLabel: Label
+    @FXML private lateinit var dpAmountLabel: Label
     @FXML private lateinit var ppnAmountLabel: Label
     @FXML private lateinit var grandTotalLabel: Label
 
@@ -80,13 +81,23 @@ class ProformaController {
                     super.startEdit()
                     val tf = graphic as? TextField
                     tf?.setOnKeyPressed { event ->
-                        if (event.code == javafx.scene.input.KeyCode.TAB) {
-                            commitEdit(tf.text)
-                            event.consume()
-                            val selectedRow = table.selectionModel.selectedIndex
-                            javafx.application.Platform.runLater {
-                                table.edit(selectedRow, kolomHarga)
+                        val selectedRow = table.selectionModel.selectedIndex
+                        when (event.code) {
+                            javafx.scene.input.KeyCode.TAB, javafx.scene.input.KeyCode.ENTER, javafx.scene.input.KeyCode.RIGHT -> {
+                                commitEdit(tf.text)
+                                event.consume()
+                                javafx.application.Platform.runLater {
+                                    table.edit(selectedRow, kolomHarga)
+                                }
                             }
+                            javafx.scene.input.KeyCode.LEFT -> {
+                                commitEdit(tf.text)
+                                event.consume()
+                                javafx.application.Platform.runLater {
+                                    table.edit(selectedRow, kolomNama)
+                                }
+                            }
+                            else -> {}
                         }
                     }
                     javafx.application.Platform.runLater { tf?.requestFocus() }
@@ -101,17 +112,27 @@ class ProformaController {
                     super.startEdit()
                     val tf = graphic as? TextField
                     tf?.setOnKeyPressed { event ->
-                        if (event.code == javafx.scene.input.KeyCode.TAB) {
-                            commitEdit(tf.text)
-                            event.consume()
-                            // Setelah harga, bisa pindah ke baris berikutnya atau tambah baris baru
-                            val selectedRow = table.selectionModel.selectedIndex
-                            if (selectedRow < detailList.size - 1) {
-                                javafx.application.Platform.runLater {
-                                    table.selectionModel.select(selectedRow + 1)
-                                    table.edit(selectedRow + 1, kolomNama)
+                        val selectedRow = table.selectionModel.selectedIndex
+                        when (event.code) {
+                            javafx.scene.input.KeyCode.TAB, javafx.scene.input.KeyCode.ENTER, javafx.scene.input.KeyCode.RIGHT -> {
+                                commitEdit(tf.text)
+                                event.consume()
+                                // Pindah ke baris berikutnya
+                                if (selectedRow < detailList.size - 1) {
+                                    javafx.application.Platform.runLater {
+                                        table.selectionModel.select(selectedRow + 1)
+                                        table.edit(selectedRow + 1, kolomNama)
+                                    }
                                 }
                             }
+                            javafx.scene.input.KeyCode.LEFT -> {
+                                commitEdit(tf.text)
+                                event.consume()
+                                javafx.application.Platform.runLater {
+                                    table.edit(selectedRow, kolomQty)
+                                }
+                            }
+                            else -> {}
                         }
                     }
                     javafx.application.Platform.runLater { tf?.requestFocus() }
@@ -136,7 +157,7 @@ class ProformaController {
                         
                         tf.setOnKeyPressed { event ->
                             when (event.code) {
-                                javafx.scene.input.KeyCode.TAB -> {
+                                javafx.scene.input.KeyCode.TAB, javafx.scene.input.KeyCode.RIGHT -> {
                                     event.consume()
                                     if (produkPopup.isShowing && produkListView.items.isNotEmpty()) {
                                         val selected = produkListView.selectionModel.selectedItem 
@@ -253,6 +274,13 @@ class ProformaController {
         ppnField.textProperty().addListener { _, _, _ ->
             updateTotals()
         }
+
+        // Listener untuk DP - hitung otomatis jika input persen
+        dpField.textProperty().addListener { _, _, _ ->
+            // Panggil updateTotals agar Grand Total ikut dihitung ulang sesuai aturan.
+            updateTotals()
+        }
+        updateDPDisplay() // Panggil saat inisialisasi
     }
 
     // ===========================================================
@@ -371,7 +399,7 @@ class ProformaController {
             stmt.setInt(2, selectedPelanggan?.idProperty?.get() ?: 0)
             stmt.setString(3, nomorField.text)
             stmt.setString(4, tanggalPicker.value?.toString() ?: LocalDate.now().toString())
-            stmt.setDouble(5, dpField.text.toDoubleOrNull() ?: 0.0)
+            stmt.setDouble(5, calculateDPValue())
             stmt.setDouble(6, ppnField.text.toDoubleOrNull() ?: 0.0) // Simpan PPN
             stmt.executeUpdate()
 
@@ -525,22 +553,39 @@ class ProformaController {
     }
 
     private fun updateTotals() {
-        val subtotal = detailList.sumOf { it.totalProperty.get().toDoubleOrNull() ?: 0.0 }
+        // 1. Hitung nilai dasar
+        val subtotal = detailList.sumOf { it.totalProperty.get().replace(",", "").toDoubleOrNull() ?: 0.0 }
         val ppnRate = ppnField.text.toDoubleOrNull() ?: 0.0
-        val ppnAmount = subtotal * (ppnRate / 100.0)
-        val grandTotal = subtotal + ppnAmount
+        val dpAmountValue = calculateDPValue()
 
+        // 2. Hitung PPN Amount sesuai aturan: dari DP jika ada, jika tidak dari Subtotal
+        val ppnAmount = if (dpAmountValue > 0) {
+            dpAmountValue * (ppnRate / 100.0)
+        } else {
+            subtotal * (ppnRate / 100.0)
+        }
+        
+        // 3. Terapkan logika Grand Total sesuai permintaan
+        val grandTotal = if (dpAmountValue > 0) dpAmountValue + ppnAmount else subtotal + ppnAmount
+
+        // 4. Update semua label
+        dpAmountLabel.text = String.format("%,.2f", dpAmountValue)
         subtotalLabel.text = String.format("%,.2f", subtotal)
         ppnAmountLabel.text = String.format("%,.2f", ppnAmount)
         grandTotalLabel.text = String.format("%,.2f", grandTotal)
-
-        // Format kolom total di tabel
-        table.columns.firstOrNull()?.let {
-            // Hack kecil untuk refresh formatting
-            it.isVisible = false
-            it.isVisible = true
-        }
     }
+
+    private fun calculateDPValue(): Double {
+        val dpPercentage = dpField.text.toDoubleOrNull() ?: 0.0
+        val subtotal = detailList.sumOf { it.totalProperty.get().replace(",", "").toDoubleOrNull() ?: 0.0 }
+        return subtotal * (dpPercentage / 100.0)
+    }
+
+    private fun updateDPDisplay() {
+        val dpAmount = calculateDPValue()
+        dpAmountLabel.text = String.format("%,.2f", dpAmount)
+    }
+
 
     private fun loadPelanggan() {
         val conn = DatabaseHelper.getConnection()

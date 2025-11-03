@@ -21,14 +21,21 @@ class MainController {
     @FXML
     private lateinit var mainPane: BorderPane
 
+    private var initialCenterNode: Node? = null
+
     companion object {
         var idPerusahaanAktif: Int = 0
     }
 
+    @FXML
+    fun initialize() {
+        // Simpan konten awal dari <center>
+        initialCenterNode = mainPane.center
+    }
+
     fun onKembaliClicked() {
-        mainPane.center = Label("Selamat datang di Invoqr").apply {
-            style = "-fx-font-size: 16px; -fx-padding: 20;"
-        }
+        // Kembalikan konten ke tampilan awal
+        mainPane.center = initialCenterNode
     }
 
     fun bukaPerusahaan(event: ActionEvent) {
