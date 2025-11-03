@@ -11,6 +11,7 @@ import model.PelangganData
 import model.ProdukData
 import utils.DatabaseHelper
 import utils.NomorGenerator
+import utils.CreateProformaTables
 import java.sql.Statement
 import java.time.LocalDate
 
@@ -54,6 +55,8 @@ class InvoiceController {
 
     fun setIdPerusahaan(id: Int) {
         idPerusahaan = id
+        // Pastikan tabel proforma dan invoice ada
+        CreateProformaTables.createTables()
         loadPelanggan()
         loadProduk()
         // Kosongkan nomor field, akan diisi setelah produk ditambahkan
@@ -288,20 +291,17 @@ class InvoiceController {
                 row.divisiProperty.set(produk.divisiProperty.get())
                 row.singkatanProperty.set(produk.singkatanProperty.get())
                 currentEditingCell?.commitEdit(produk.namaProperty.get())
-                
-                // Update nomor setelah produk ditambahkan
-                updateNomorIfReady()
             }
         }
         produkPopup.hide()
+        updateNomorIfReady() // Panggil di sini agar nomor selalu ter-update setelah produk dipilih
         moveToNextColumn()
     }
     
     private fun updateNomorIfReady() {
-        // Generate nomor hanya jika ada produk dan tanggal sudah dipilih
-        if (detailList.isNotEmpty() && tanggalPicker.value != null) {
-            val firstProduct = detailList.firstOrNull()
-            if (firstProduct != null && !firstProduct.namaProperty.get().isBlank()) {
+        // Generate nomor hanya jika ada produk yang valid dan tanggal sudah dipilih
+        val firstProduct = detailList.firstOrNull { it.namaProperty.get().isNotBlank() }
+        if (firstProduct != null && tanggalPicker.value != null) {
                 nomorField.text = NomorGenerator.generateNomor(
                     idPerusahaan,
                     "invoice",
@@ -310,7 +310,6 @@ class InvoiceController {
                     firstProduct.singkatanProperty.get(),
                     tanggalPicker.value
                 )
-            }
         }
     }
 
@@ -330,7 +329,7 @@ class InvoiceController {
             // TODO: Buat tabel 'invoice' dan 'detail_invoice' di database
             val stmt = conn.prepareStatement(
                 """
-                INSERT INTO invoice (id_perusahaan, id_pelanggan, nomor, tanggal, dp, tax)
+                INSERT INTO invoice (id_perusahaan, id_pelanggan, nomor, tanggal_proforma, dp, tax)
                 VALUES (?, ?, ?, ?, ?, ?)
                 """,
                 Statement.RETURN_GENERATED_KEYS
