@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox xmlns="http://javafx.com/javafx/11.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controller.DaftarProformaController">
+   <children>
+      <Label style="-fx-font-size: 24px; -fx-font-weight: bold; -fx-padding: 20;" text="Daftar Proforma" />
+      
+      <HBox alignment="CENTER_LEFT" spacing="10" style="-fx-padding: 0 20 10 20;">
+         <Button fx:id="refreshBtn" text="🔄 Refresh" />
+         <Button fx:id="buatBaruBtn" text="➕ Buat Proforma Baru" />
+      </HBox>
+      
+      <TableView fx:id="proformaTable" VBox.vgrow="ALWAYS" style="-fx-padding: 0 20 20 20;">
+         <columns>
+            <TableColumn fx:id="kolomId" text="ID" prefWidth="60" />
+            <TableColumn fx:id="kolomNomor" text="Nomor" prefWidth="150" />
+            <TableColumn fx:id="kolomTanggal" text="Tanggal" prefWidth="120" />
+            <TableColumn fx:id="kolomPelanggan" text="Pelanggan" prefWidth="200" />
+            <TableColumn fx:id="kolomTotal" text="Total" prefWidth="150" />
+         </columns>
+      </TableView>
+   </children>
+</VBox>

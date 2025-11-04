@@ -11,6 +11,8 @@ import javafx.util.Callback
 import model.PelangganData
 import model.ProdukData
 import utils.DatabaseHelper
+import utils.NomorGenerator
+import utils.CreateProformaTables
 import java.sql.*
 import java.time.LocalDate
 
@@ -58,8 +60,12 @@ class ProformaController {
 
     fun setIdPerusahaan(id: Int) {
         idPerusahaan = id
+        // Pastikan tabel proforma dan invoice ada
+        CreateProformaTables.createTables()
         loadPelanggan()
         loadProduk()
+        // Set tanggal hari ini
+        tanggalPicker.value = LocalDate.now()
     }
 
     @FXML
@@ -266,8 +272,8 @@ class ProformaController {
         contractRefField.textProperty().addListener { _, _, newValue ->
             nomorField.text = newValue
         }
-        contractDatePicker.valueProperty().addListener { _, _, newDate ->
-            tanggalPicker.value = newDate
+        tanggalPicker.valueProperty().addListener { _, _, newDate ->
+            updateNomorIfReady()
         }
 
         // Listener untuk PPN
@@ -280,6 +286,25 @@ class ProformaController {
             // Panggil updateTotals agar Grand Total ikut dihitung ulang sesuai aturan.
             updateTotals()
         }
+        // Filter untuk DP field - hanya angka
+        dpField.textProperty().addListener { _, oldValue, newValue ->
+            if (!newValue.matches("\\d*\\.?\\d*".toRegex())) {
+                dpField.text = oldValue
+            } else {
+                updateDPDisplay()
+            }
+        }
+        
+        // Contract date mengikuti tanggal proforma
+        tanggalPicker.valueProperty().addListener { _, _, newDate ->
+            contractDatePicker.value = newDate
+        }
+        
+        // Contract ref mengikuti nomor proforma
+        nomorField.textProperty().addListener { _, _, newValue ->
+            contractRefField.text = newValue
+        }
+        
         updateDPDisplay() // Panggil saat inisialisasi
     }
 
@@ -365,11 +390,29 @@ class ProformaController {
                 row.namaProperty.set(produk.namaProperty.get())
                 row.uomProperty.set(produk.uomProperty.get())
                 row.divisiProperty.set(produk.divisiProperty.get())
+                row.singkatanProperty.set(produk.singkatanProperty.get())
                 currentEditingCell?.commitEdit(produk.namaProperty.get())
             }
         }
         produkPopup.hide()
+        updateNomorIfReady() // Panggil di sini agar nomor selalu ter-update setelah produk dipilih
         moveToNextColumn()
+    }
+
+    private fun updateNomorIfReady() {
+        val firstProduct = detailList.firstOrNull { it.namaProperty.get().isNotBlank() }
+        if (firstProduct != null && tanggalPicker.value != null) {
+            val generatedNomor = NomorGenerator.generateNomor(
+                idPerusahaan,
+                "proforma",
+                firstProduct.divisiProperty.get(),
+                firstProduct.namaProperty.get(),
+                firstProduct.singkatanProperty.get(),
+                tanggalPicker.value
+            )
+            nomorField.text = generatedNomor
+            contractRefField.text = generatedNomor
+        }
     }
 
     private fun moveToNextColumn() {
@@ -388,19 +431,30 @@ class ProformaController {
         val conn = DatabaseHelper.getConnection()
         conn.autoCommit = false
         try {
+            val subtotal = detailList.sumOf { it.totalProperty.get().replace(",", ".").toDoubleOrNull() ?: 0.0 }
+            val ppnRate = ppnField.text.toDoubleOrNull() ?: 0.0
+            val ppnAmount = subtotal * (ppnRate / 100.0)
+            val dpValue = calculateDPValue()
+            val totalDenganPpn = subtotal + ppnAmount
+            
             val stmt = conn.prepareStatement(
                 """
-                INSERT INTO proforma (id_perusahaan, id_pelanggan, nomor, tanggal, dp, tax)
-                VALUES (?, ?, ?, ?, ?, ?)
+                INSERT INTO proforma (id_perusahaan, id_pelanggan, contract_ref, contract_date, 
+                                    total, tax, total_dengan_ppn, no_proforma, tanggal_proforma, dp)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 Statement.RETURN_GENERATED_KEYS
             )
             stmt.setInt(1, idPerusahaan)
             stmt.setInt(2, selectedPelanggan?.idProperty?.get() ?: 0)
-            stmt.setString(3, nomorField.text)
-            stmt.setString(4, tanggalPicker.value?.toString() ?: LocalDate.now().toString())
-            stmt.setDouble(5, calculateDPValue())
-            stmt.setDouble(6, ppnField.text.toDoubleOrNull() ?: 0.0) // Simpan PPN
+            stmt.setString(3, contractRefField.text)
+            stmt.setString(4, contractDatePicker.value?.toString())
+            stmt.setDouble(5, subtotal)
+            stmt.setDouble(6, ppnAmount)
+            stmt.setDouble(7, totalDenganPpn)
+            stmt.setString(8, nomorField.text)
+            stmt.setString(9, tanggalPicker.value?.toString() ?: LocalDate.now().toString())
+            stmt.setDouble(10, dpValue)
             stmt.executeUpdate()
 
             val rs = stmt.generatedKeys
@@ -607,7 +661,7 @@ class ProformaController {
 
     private fun loadProduk() {
         val conn = DatabaseHelper.getConnection()
-        val stmt = conn.prepareStatement("SELECT id_produk, nama_produk, uom, divisi FROM produk WHERE id_perusahaan = ?")
+        val stmt = conn.prepareStatement("SELECT id_produk, nama_produk, uom, divisi, singkatan FROM produk WHERE id_perusahaan = ?")
         stmt.setInt(1, idPerusahaan)
         val rs = stmt.executeQuery()
         while (rs.next()) {
@@ -616,7 +670,8 @@ class ProformaController {
                     rs.getInt("id_produk"),
                     rs.getString("nama_produk"),
                     rs.getString("uom"),
-                    rs.getString("divisi")
+                    divisi = rs.getString("divisi"),
+                    singkatan = rs.getString("singkatan") ?: ""
                 )
             )
         }

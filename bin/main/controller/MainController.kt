@@ -16,6 +16,7 @@ import controller.ProdukController
 import controller.PerusahaanTabelController
 import controller.ProformaController
 import controller.PerusahaanController
+import controller.DaftarProformaController
 
 class MainController {
     @FXML
@@ -128,7 +129,7 @@ class MainController {
         }
     }
 
-    fun bukaTransaksi() {
+    fun bukaInputPenjualan() {
         val alert = Alert(Alert.AlertType.CONFIRMATION)
         alert.title = "Pilih Jenis Transaksi"
         alert.headerText = "Silakan pilih jenis transaksi yang ingin dibuat:"
@@ -162,7 +163,33 @@ class MainController {
         }
     }
 
-    private fun showScreen(content: Node) {
+    fun bukaTransaksi() {
+        if (idPerusahaanAktif == 0) {
+            val alert = Alert(Alert.AlertType.WARNING)
+            alert.title = "Peringatan"
+            alert.headerText = null
+            alert.contentText = "Belum ada perusahaan dipilih. Silakan pilih perusahaan terlebih dahulu."
+            alert.showAndWait()
+            return
+        }
+
+        try {
+            val loader = FXMLLoader(javaClass.getResource("/view/DaftarProforma.fxml"))
+            val view = loader.load<VBox>()
+            val controller = loader.getController<DaftarProformaController>()
+            controller.setIdPerusahaan(idPerusahaanAktif)
+            controller.setMainController(this)
+            showScreen(view)
+        } catch (e: Exception) {
+            val alert = Alert(Alert.AlertType.ERROR)
+            alert.title = "Error"
+            alert.headerText = "Gagal membuka daftar proforma"
+            alert.contentText = e.message
+            alert.showAndWait()
+        }
+    }
+
+    fun showScreen(content: Node) {
         mainPane.center = content
     }
 

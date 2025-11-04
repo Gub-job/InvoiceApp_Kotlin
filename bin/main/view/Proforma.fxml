@@ -59,8 +59,8 @@
         <DatePicker fx:id="tanggalPicker" GridPane.rowIndex="3" GridPane.columnIndex="3"/>
 
         <!-- Baris 5 -->
-        <Label text="DP:" GridPane.rowIndex="4" GridPane.columnIndex="0"/>
-        <TextField fx:id="dpField" promptText="0" GridPane.rowIndex="4" GridPane.columnIndex="1"/>
+        <Label text="DP (%):" GridPane.rowIndex="4" GridPane.columnIndex="0"/>
+        <TextField fx:id="dpField" promptText="Masukkan persen (contoh: 95)" GridPane.rowIndex="4" GridPane.columnIndex="1"/>
     </GridPane>
 
     <!-- Table Produk -->

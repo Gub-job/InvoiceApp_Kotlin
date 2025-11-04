@@ -36,7 +36,8 @@
                 <Menu
                     style="-fx-text-fill: #1e293b;-fx-font-size: 14px;-fx-font-weight: bold;"
                     text="💳 Transaksi">
-                    <MenuItem onAction="#bukaTransaksi" text="Input Penjualan" />
+                    <MenuItem onAction="#bukaInputPenjualan" text="Input Penjualan" />
+                    <MenuItem onAction="#bukaTransaksi" text="Daftar Proforma" />
                 </Menu>
 
                 <Menu
