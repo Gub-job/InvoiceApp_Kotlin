@@ -30,30 +30,37 @@
             <ColumnConstraints percentWidth="30"/>
         </columnConstraints>
 
-        <!-- Baris 1 -->
+        <!-- Baris 1: Contract Ref dan Contract Date -->
+        <Label text="Contract Ref:" GridPane.rowIndex="0" GridPane.columnIndex="0"/>
+        <TextField fx:id="contractRefField" GridPane.rowIndex="0" GridPane.columnIndex="1"/>
+        <Label text="Contract Date:" GridPane.rowIndex="0" GridPane.columnIndex="2"/>
+        <DatePicker fx:id="contractDatePicker" GridPane.rowIndex="0" GridPane.columnIndex="3"/>
+
+        <!-- Baris 2 -->
         <Label text="Pelanggan:" GridPane.rowIndex="1" GridPane.columnIndex="0"/>
         <TextField fx:id="pelangganField" promptText="Ketik nama pelanggan..."
                    GridPane.rowIndex="1" GridPane.columnIndex="1"/>
 
         <Label text="Alamat:" GridPane.rowIndex="1" GridPane.columnIndex="2"/>
         <TextField fx:id="alamatField" editable="false"
-                   GridPane.rowIndex="1" GridPane.columnIndex="3"/>
-
-        <!-- Baris 2 -->
-        <Label text="Telepon:" GridPane.rowIndex="2" GridPane.columnIndex="0"/>
-        <TextField fx:id="teleponField" editable="false"
-                   GridPane.rowIndex="2" GridPane.columnIndex="1"/>
+                   GridPane.rowIndex="1" GridPane.columnIndex="3" />
 
         <!-- Baris 3 -->
+        <Label text="Telepon:" GridPane.rowIndex="2" GridPane.columnIndex="0"/>
+        <TextField fx:id="teleponField" editable="false"
+                   GridPane.rowIndex="2" GridPane.columnIndex="1" />
+
+        <!-- Baris 4 -->
         <Label text="Nomor Invoice:" GridPane.rowIndex="3" GridPane.columnIndex="0"/>
         <TextField fx:id="nomorField" GridPane.rowIndex="3" GridPane.columnIndex="1"/>
 
         <Label text="Tanggal:" GridPane.rowIndex="3" GridPane.columnIndex="2"/>
         <DatePicker fx:id="tanggalPicker" GridPane.rowIndex="3" GridPane.columnIndex="3"/>
 
-        <!-- Baris 4 -->
-        <Label text="DP:" GridPane.rowIndex="4" GridPane.columnIndex="0"/>
-        <TextField fx:id="dpField" promptText="0" GridPane.rowIndex="4" GridPane.columnIndex="1"/>
+        <!-- Baris 5: DP (%) -->
+        <Label text="DP (%):" GridPane.rowIndex="4" GridPane.columnIndex="0"/>
+        <TextField fx:id="dpField" promptText="Masukkan persen (contoh: 95)" GridPane.rowIndex="4" GridPane.columnIndex="1"/>
+
     </GridPane>
 
     <!-- Table Produk -->
@@ -80,14 +87,17 @@
         <Label text="Subtotal:" GridPane.rowIndex="0" GridPane.columnIndex="0"/>
         <Label fx:id="subtotalLabel" text="0.00" GridPane.rowIndex="0" GridPane.columnIndex="1"/>
 
-        <Label text="PPN (%):" GridPane.rowIndex="1" GridPane.columnIndex="0"/>
-        <TextField fx:id="ppnField" text="11" GridPane.rowIndex="1" GridPane.columnIndex="1"/>
+        <Label text="DP Amount:" GridPane.rowIndex="1" GridPane.columnIndex="0"/>
+        <Label fx:id="dpAmountLabel" text="0.00" GridPane.rowIndex="1" GridPane.columnIndex="1"/>
 
-        <Label text="PPN Amount:" GridPane.rowIndex="2" GridPane.columnIndex="0"/>
-        <Label fx:id="ppnAmountLabel" text="0.00" GridPane.rowIndex="2" GridPane.columnIndex="1"/>
+        <Label text="PPN (%):" GridPane.rowIndex="2" GridPane.columnIndex="0"/>
+        <TextField fx:id="ppnField" text="11" GridPane.rowIndex="2" GridPane.columnIndex="1"/>
 
-        <Label text="Grand Total:" style="-fx-font-weight: bold;" GridPane.rowIndex="3" GridPane.columnIndex="0"/>
-        <Label fx:id="grandTotalLabel" text="0.00" style="-fx-font-weight: bold;" GridPane.rowIndex="3" GridPane.columnIndex="1"/>
+        <Label text="PPN Amount:" GridPane.rowIndex="3" GridPane.columnIndex="0"/>
+        <Label fx:id="ppnAmountLabel" text="0.00" GridPane.rowIndex="3" GridPane.columnIndex="1"/>
+
+        <Label text="Grand Total:" style="-fx-font-weight: bold;" GridPane.rowIndex="4" GridPane.columnIndex="0"/>
+        <Label fx:id="grandTotalLabel" text="0.00" style="-fx-font-weight: bold;" GridPane.rowIndex="4" GridPane.columnIndex="1"/>
     </GridPane>
 
     <HBox spacing="10" alignment="CENTER">

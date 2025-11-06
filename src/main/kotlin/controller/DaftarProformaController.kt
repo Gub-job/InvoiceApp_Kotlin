@@ -3,8 +3,11 @@ package controller
 import javafx.collections.FXCollections
 import javafx.fxml.FXML
 import javafx.fxml.FXMLLoader
+import javafx.scene.Scene
 import javafx.scene.control.*
 import javafx.scene.layout.VBox
+import javafx.stage.Modality
+import javafx.stage.Stage
 import model.ProformaData
 import utils.DatabaseHelper
 import java.sql.Connection
@@ -55,15 +58,28 @@ class DaftarProformaController {
         
         refreshBtn.setOnAction { loadProformaList() }
         buatBaruBtn.setOnAction { buatProformaBaru() }
+
+        // Tambahkan listener untuk double-click pada baris tabel
+        proformaTable.setOnMouseClicked { event ->
+            if (event.clickCount == 2) {
+                proformaTable.selectionModel.selectedItem?.let { selectedProforma ->
+                    editProforma(selectedProforma)
+                }
+            }
+        }
     }
     
     private fun loadProformaList() {
         proformaList.clear()
         try {
             val conn = DatabaseHelper.getConnection()
+            // Modifikasi query untuk menghitung grand total yang benar
             val stmt = conn.prepareStatement("""
                 SELECT p.id_proforma, p.no_proforma, p.tanggal_proforma, pel.nama as pelanggan_nama, 
-                       p.total_dengan_ppn as total
+                       CASE 
+                           WHEN p.dp > 0 THEN p.dp + (p.dp * (p.tax / p.total))
+                           ELSE p.total_dengan_ppn 
+                       END as total
                 FROM proforma p 
                 LEFT JOIN pelanggan pel ON p.id_pelanggan = pel.id 
                 WHERE p.id_perusahaan = ? 
@@ -98,6 +114,34 @@ class DaftarProformaController {
             mainController?.showScreen(view)
         } catch (e: Exception) {
             showAlert("Error", "Gagal membuka form proforma: ${e.message}")
+        }
+    }
+
+    private fun editProforma(proforma: ProformaData) {
+        try {
+            val loader = FXMLLoader(javaClass.getResource("/view/Proforma.fxml"))
+            val view = loader.load<VBox>()
+            val controller = loader.getController<ProformaController>()
+            controller.setIdPerusahaan(idPerusahaan)
+            controller.loadProforma(proforma.idProperty.get())
+
+            // Buat stage baru untuk dialog edit
+            val editStage = Stage()
+            editStage.title = "Edit Proforma - ${proforma.nomorProperty.get()}"
+            editStage.initModality(Modality.APPLICATION_MODAL)
+            editStage.initOwner(proformaTable.scene.window)
+            
+            val scene = Scene(view)
+            editStage.scene = scene
+            editStage.isResizable = false
+
+            // Tampilkan dialog dan tunggu sampai ditutup
+            editStage.showAndWait()
+
+            // Setelah dialog ditutup, refresh daftar proforma
+            loadProformaList()
+        } catch (e: Exception) {
+            showAlert("Error", "Gagal membuka proforma untuk diedit: ${e.message}")
         }
     }
     

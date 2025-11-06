@@ -7,6 +7,7 @@ import javafx.geometry.Bounds
 import javafx.scene.control.*
 import javafx.scene.control.cell.TextFieldTableCell
 import javafx.stage.Popup
+import javafx.stage.Stage
 import javafx.util.Callback
 import model.PelangganData
 import model.ProdukData
@@ -56,6 +57,7 @@ class ProformaController {
     private var selectedPelanggan: PelangganData? = null
     private var idPerusahaan: Int = 0
     private var idProformaBaru: Int = 0
+    private var isEditMode = false
     private var currentEditingCell: TextFieldTableCell<ProdukData, String>? = null
 
     fun setIdPerusahaan(id: Int) {
@@ -66,6 +68,75 @@ class ProformaController {
         loadProduk()
         // Set tanggal hari ini
         tanggalPicker.value = LocalDate.now()
+    }
+
+    fun loadProforma(idProforma: Int) {
+        this.idProformaBaru = idProforma
+        this.isEditMode = true
+        simpanBtn.text = "Update" // Ganti teks tombol
+
+        val conn = DatabaseHelper.getConnection()
+        try {
+            // 1. Load data master proforma
+            val stmt = conn.prepareStatement("SELECT * FROM proforma WHERE id_proforma = ?")
+            stmt.setInt(1, idProforma)
+            val rs = stmt.executeQuery()
+
+            if (rs.next()) {
+                nomorField.text = rs.getString("no_proforma")
+                tanggalPicker.value = LocalDate.parse(rs.getString("tanggal_proforma"))
+                contractRefField.text = rs.getString("contract_ref")
+                rs.getString("contract_date")?.let { contractDatePicker.value = LocalDate.parse(it) }
+                
+                val dpValue = rs.getDouble("dp")
+                val subtotal = rs.getDouble("total")
+                if (subtotal > 0) {
+                    val dpPercentage = (dpValue / subtotal) * 100
+                    dpField.text = String.format("%.2f", dpPercentage).replace(",", ".")
+                }
+
+                val ppnAmount = rs.getDouble("tax")
+                if (subtotal > 0) {
+                    val ppnPercentage = (ppnAmount / subtotal) * 100
+                    ppnField.text = String.format("%.2f", ppnPercentage).replace(",", ".")
+                }
+
+                // Load pelanggan
+                val idPelanggan = rs.getInt("id_pelanggan")
+                pelangganList.find { it.idProperty.get() == idPelanggan }?.let {
+                    selectedPelanggan = it
+                    pelangganField.text = it.namaProperty.get()
+                    alamatField.text = it.alamatProperty.get()
+                    teleponField.text = it.teleponProperty.get()
+                }
+            }
+
+            // 2. Load detail produk
+            val detailStmt = conn.prepareStatement("""
+                SELECT dp.*, p.nama_produk, p.uom, p.divisi, p.singkatan 
+                FROM detail_proforma dp 
+                JOIN produk p ON dp.id_produk = p.id_produk
+                WHERE dp.id_proforma = ?
+            """)
+            detailStmt.setInt(1, idProforma)
+            val detailRs = detailStmt.executeQuery()
+            while(detailRs.next()) {
+                val produk = ProdukData(
+                    id = detailRs.getInt("id_produk"),
+                    nama = detailRs.getString("nama_produk"),
+                    uom = detailRs.getString("uom"),
+                    qty = detailRs.getDouble("qty").toString(),
+                    harga = detailRs.getDouble("harga").toString()
+                )
+                detailList.add(produk)
+                hitungTotalBaris(produk)
+            }
+            updateTotals()
+        } catch (e: Exception) {
+            showAlert("Error", "Gagal memuat data proforma: ${e.message}")
+        } finally {
+            conn.close()
+        }
     }
 
     @FXML
@@ -428,23 +499,28 @@ class ProformaController {
     // === SIMPAN PROFORMA & DETAILNYA
     // ===========================================================
     private fun simpanProformaDanDetail() {
+        if (isEditMode) {
+            updateProformaDanDetail()
+        } else {
+            simpanProformaBaru()
+        }
+    }
+
+    private fun simpanProformaBaru() {
         val conn = DatabaseHelper.getConnection()
         conn.autoCommit = false
         try {
             val subtotal = detailList.sumOf { it.totalProperty.get().replace(",", ".").toDoubleOrNull() ?: 0.0 }
             val ppnRate = ppnField.text.toDoubleOrNull() ?: 0.0
             val ppnAmount = subtotal * (ppnRate / 100.0)
-            val dpValue = calculateDPValue()
             val totalDenganPpn = subtotal + ppnAmount
-            
-            val stmt = conn.prepareStatement(
-                """
+
+            val sql = """
                 INSERT INTO proforma (id_perusahaan, id_pelanggan, contract_ref, contract_date, 
                                     total, tax, total_dengan_ppn, no_proforma, tanggal_proforma, dp)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """,
-                Statement.RETURN_GENERATED_KEYS
-            )
+            """
+            val stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)
             stmt.setInt(1, idPerusahaan)
             stmt.setInt(2, selectedPelanggan?.idProperty?.get() ?: 0)
             stmt.setString(3, contractRefField.text)
@@ -454,36 +530,90 @@ class ProformaController {
             stmt.setDouble(7, totalDenganPpn)
             stmt.setString(8, nomorField.text)
             stmt.setString(9, tanggalPicker.value?.toString() ?: LocalDate.now().toString())
-            stmt.setDouble(10, dpValue)
+            stmt.setDouble(10, calculateDPValue())
             stmt.executeUpdate()
 
             val rs = stmt.generatedKeys
             if (rs.next()) idProformaBaru = rs.getInt(1)
 
-            for (produk in detailList) {
-                val detailStmt = conn.prepareStatement(
-                    """
-                    INSERT INTO detail_proforma (id_proforma, id_produk, qty, harga, total)
-                    VALUES (?, ?, ?, ?, ?)
-                    """
-                )
-                detailStmt.setInt(1, idProformaBaru)
-                detailStmt.setInt(2, produk.idProperty.get())
-                detailStmt.setDouble(3, produk.qtyProperty.get().toDoubleOrNull() ?: 0.0)
-                detailStmt.setDouble(4, produk.hargaProperty.get().toDoubleOrNull() ?: 0.0)
-                val total = (produk.qtyProperty.get().toDoubleOrNull() ?: 0.0) *
-                            (produk.hargaProperty.get().toDoubleOrNull() ?: 0.0)
-                detailStmt.setDouble(5, total)
-                detailStmt.executeUpdate()
-            }
+            simpanDetailProforma(conn, idProformaBaru)
 
             conn.commit()
             showAlert("Sukses", "Proforma berhasil disimpan.")
+            isEditMode = true // Setelah simpan, masuk mode edit
+            simpanBtn.text = "Update"
         } catch (e: Exception) {
             conn.rollback()
             showAlert("Error", "Gagal menyimpan proforma: ${e.message}")
         } finally {
             conn.close()
+        }
+    }
+
+    private fun updateProformaDanDetail() {
+        val conn = DatabaseHelper.getConnection()
+        conn.autoCommit = false
+        try {
+            val subtotal = detailList.sumOf { it.totalProperty.get().replace(",", ".").toDoubleOrNull() ?: 0.0 }
+            val ppnRate = ppnField.text.toDoubleOrNull() ?: 0.0
+            val ppnAmount = subtotal * (ppnRate / 100.0)
+            val totalDenganPpn = subtotal + ppnAmount
+
+            val sql = """
+                UPDATE proforma SET 
+                    id_pelanggan = ?, contract_ref = ?, contract_date = ?, total = ?, tax = ?, 
+                    total_dengan_ppn = ?, no_proforma = ?, tanggal_proforma = ?, dp = ?
+                WHERE id_proforma = ?
+            """
+            val stmt = conn.prepareStatement(sql)
+            stmt.setInt(1, selectedPelanggan?.idProperty?.get() ?: 0)
+            stmt.setString(2, contractRefField.text)
+            stmt.setString(3, contractDatePicker.value?.toString())
+            stmt.setDouble(4, subtotal)
+            stmt.setDouble(5, ppnAmount)
+            stmt.setDouble(6, totalDenganPpn)
+            stmt.setString(7, nomorField.text)
+            stmt.setString(8, tanggalPicker.value?.toString() ?: LocalDate.now().toString())
+            stmt.setDouble(9, calculateDPValue())
+            stmt.setInt(10, idProformaBaru)
+            stmt.executeUpdate()
+
+            // Hapus detail lama dan masukkan yang baru
+            val deleteStmt = conn.prepareStatement("DELETE FROM detail_proforma WHERE id_proforma = ?")
+            deleteStmt.setInt(1, idProformaBaru)
+            deleteStmt.executeUpdate()
+
+            simpanDetailProforma(conn, idProformaBaru)
+
+            conn.commit()
+            showAlert("Sukses", "Proforma berhasil diupdate.")
+            
+            // Tutup jendela edit setelah berhasil update
+            (simpanBtn.scene.window as? Stage)?.close()
+        } catch (e: Exception) {
+            conn.rollback()
+            showAlert("Error", "Gagal mengupdate proforma: ${e.message}")
+        } finally {
+            conn.close()
+        }
+    }
+
+    private fun simpanDetailProforma(conn: Connection, idProforma: Int) {
+        for (produk in detailList) {
+            val detailStmt = conn.prepareStatement(
+                """
+                INSERT INTO detail_proforma (id_proforma, id_produk, qty, harga, total)
+                VALUES (?, ?, ?, ?, ?)
+                """
+            )
+            detailStmt.setInt(1, idProforma)
+            detailStmt.setInt(2, produk.idProperty.get())
+            detailStmt.setDouble(3, produk.qtyProperty.get().toDoubleOrNull() ?: 0.0)
+            detailStmt.setDouble(4, produk.hargaProperty.get().toDoubleOrNull() ?: 0.0)
+            val total = (produk.qtyProperty.get().toDoubleOrNull() ?: 0.0) *
+                        (produk.hargaProperty.get().toDoubleOrNull() ?: 0.0)
+            detailStmt.setDouble(5, total)
+            detailStmt.executeUpdate()
         }
     }
 
