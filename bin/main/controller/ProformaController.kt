@@ -73,7 +73,7 @@ class ProformaController {
     fun loadProforma(idProforma: Int) {
         this.idProformaBaru = idProforma
         this.isEditMode = true
-        simpanBtn.text = "Update" // Ganti teks tombol
+        simpanBtn.text = "Simpan" // Ganti teks tombol
 
         val conn = DatabaseHelper.getConnection()
         try {
@@ -340,11 +340,10 @@ class ProformaController {
             simpanProformaDanDetail()
         }
 
-        contractRefField.textProperty().addListener { _, _, newValue ->
-            nomorField.text = newValue
-        }
         tanggalPicker.valueProperty().addListener { _, _, newDate ->
             updateNomorIfReady()
+            // Menyamakan tanggal kontrak dengan tanggal proforma
+            contractDatePicker.value = newDate
         }
 
         // Listener untuk PPN
@@ -364,11 +363,6 @@ class ProformaController {
             } else {
                 updateDPDisplay()
             }
-        }
-        
-        // Contract date mengikuti tanggal proforma
-        tanggalPicker.valueProperty().addListener { _, _, newDate ->
-            contractDatePicker.value = newDate
         }
         
         // Contract ref mengikuti nomor proforma
@@ -541,7 +535,7 @@ class ProformaController {
             conn.commit()
             showAlert("Sukses", "Proforma berhasil disimpan.")
             isEditMode = true // Setelah simpan, masuk mode edit
-            simpanBtn.text = "Update"
+            simpanBtn.text = "Simpan"
         } catch (e: Exception) {
             conn.rollback()
             showAlert("Error", "Gagal menyimpan proforma: ${e.message}")

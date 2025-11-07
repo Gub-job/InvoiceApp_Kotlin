@@ -300,7 +300,7 @@ class InvoiceController {
         // Juga set contract date mengikuti tanggal invoice
         tanggalPicker.valueProperty().addListener { _, _, newDate ->
             updateNomorIfReady()
-            contractDatePicker.value = newDate
+            // contractDatePicker.value = newDate // Dihapus agar tidak otomatis mengikuti tanggal invoice
         }
 
         // Listener untuk DP field - hanya angka dan update total
@@ -314,9 +314,9 @@ class InvoiceController {
         }
 
         // Contract ref mengikuti nomor invoice
-        nomorField.textProperty().addListener { _, _, newValue ->
-            contractRefField.text = newValue
-        }
+        // nomorField.textProperty().addListener { _, _, newValue ->
+        //     contractRefField.text = newValue // Dihapus agar tidak otomatis mengikuti nomor invoice
+        // }
     }
 
 
@@ -594,7 +594,7 @@ class InvoiceController {
         conn.autoCommit = false
         try {
             val subtotal = detailList.sumOf { it.totalProperty.get().replace(",", ".").toDoubleOrNull() ?: 0.0 }
-            val ppnRate = ppnField.text.toDoubleOrNull() ?: 0.0
+            val ppnRate = ppnField.text.toDoubleOrNull() ?: 11.0
             val ppnAmount = subtotal * (ppnRate / 100.0)
             val totalDenganPpn = subtotal + ppnAmount
 
@@ -624,7 +624,7 @@ class InvoiceController {
             conn.commit()
             showAlert("Sukses", "Invoice berhasil disimpan.")
             isEditMode = true // Setelah simpan, masuk mode edit
-            simpanBtn.text = "Update"
+            simpanBtn.text = "Simpan"
         } catch (e: Exception) {
             conn.rollback()
             showAlert("Error", "Gagal menyimpan invoice: ${e.message}")
@@ -638,7 +638,7 @@ class InvoiceController {
         conn.autoCommit = false
         try {
             val subtotal = detailList.sumOf { it.totalProperty.get().replace(",", ".").toDoubleOrNull() ?: 0.0 }
-            val ppnRate = ppnField.text.toDoubleOrNull() ?: 0.0
+            val ppnRate = ppnField.text.toDoubleOrNull() ?: 11.0
             val ppnAmount = subtotal * (ppnRate / 100.0)
             val totalDenganPpn = subtotal + ppnAmount
 
@@ -658,7 +658,7 @@ class InvoiceController {
             stmt.setString(7, nomorField.text)
             stmt.setString(8, tanggalPicker.value?.toString() ?: LocalDate.now().toString())
             stmt.setDouble(9, calculateDPValue())
-            stmt.setInt(10, idInvoiceBaru)
+            stmt.setInt(10, idInvoiceBaru) // id_invoice
             stmt.executeUpdate()
 
             // Hapus detail lama dan masukkan yang baru
@@ -683,7 +683,7 @@ class InvoiceController {
             val detailStmt = conn.prepareStatement(
                 """
                 INSERT INTO detail_invoice (id_invoice, id_produk, qty, harga, total)
-                VALUES (?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?) 
                 """
             )
             detailStmt.setInt(1, idInvoice)
@@ -701,16 +701,16 @@ class InvoiceController {
     private fun loadProformaIntoInvoice(idProforma: Int) {
         val conn = DatabaseHelper.getConnection()
         try {
-            // 1. Load data master proforma
+            // 1. Load data master proforma (FIX: ganti 'id' menjadi 'id_proforma')
             val stmt = conn.prepareStatement("SELECT * FROM proforma WHERE id_proforma = ?")
             stmt.setInt(1, idProforma)
             val rs = stmt.executeQuery()
 
             if (rs.next()) {
                 // Set invoice ID for potential update
-                this.idInvoiceBaru = idProforma // Assuming invoice ID can be same as proforma ID if converted
+                // this.idInvoiceBaru = idProforma // Sebaiknya jangan di-set di sini, biarkan auto-increment
                 this.isEditMode = true
-                simpanBtn.text = "Update"
+                simpanBtn.text = "Simpan"
 
                 nomorField.text = NomorGenerator.generateNomor(
                     idPerusahaan,
@@ -719,8 +719,8 @@ class InvoiceController {
                     "", // Nama produk tidak langsung dari proforma header, akan diisi dari produk
                     "", // Singkatan tidak langsung dari proforma header, akan diisi dari produk
                     LocalDate.now() // Tanggal invoice adalah tanggal hari ini
-                )
-                tanggalPicker.value = LocalDate.now() // Tanggal invoice adalah tanggal hari ini
+                ) // Nomor invoice akan digenerate ulang
+                tanggalPicker.value = LocalDate.now()
                 contractRefField.text = rs.getString("no_proforma")
                 rs.getString("tanggal_proforma")?.let { contractDatePicker.value = LocalDate.parse(it) }
 
@@ -758,7 +758,7 @@ class InvoiceController {
                 FROM detail_proforma dp 
                 JOIN produk p ON dp.id_produk = p.id_produk
                 WHERE dp.id_proforma = ?
-            """)
+            """) // FIX: ganti 'dp.id' menjadi 'dp.id_proforma'
             detailStmt.setInt(1, idProforma)
             val detailRs = detailStmt.executeQuery()
             while(detailRs.next()) {
@@ -772,7 +772,7 @@ class InvoiceController {
                 detailList.add(produk)
                 hitungTotalBaris(produk)
             }
-            updateTotals()
+            updateTotals() // Panggil updateTotals setelah semua detail dimuat
         } catch (e: Exception) {
             showAlert("Error", "Gagal memuat data proforma ke invoice: ${e.message}")
         } finally {
@@ -784,18 +784,18 @@ class InvoiceController {
     fun loadInvoice(idInvoice: Int) {
         this.idInvoiceBaru = idInvoice
         this.isEditMode = true
-        simpanBtn.text = "Update"
+        simpanBtn.text = "Simpan"
 
         val conn = DatabaseHelper.getConnection()
         try {
             // 1. Load data master invoice
-            val stmt = conn.prepareStatement("SELECT * FROM invoice WHERE id_invoice = ?")
+            val stmt = conn.prepareStatement("SELECT * FROM invoice WHERE id = ?")
             stmt.setInt(1, idInvoice)
             val rs = stmt.executeQuery()
 
             if (rs.next()) {
-                nomorField.text = rs.getString("no_invoice")
-                tanggalPicker.value = LocalDate.parse(rs.getString("tanggal_invoice"))
+                nomorField.text = rs.getString("nomor")
+                tanggalPicker.value = LocalDate.parse(rs.getString("tanggal"))
                 contractRefField.text = rs.getString("contract_ref")
                 rs.getString("contract_date")?.let { contractDatePicker.value = LocalDate.parse(it) }
 
@@ -832,7 +832,7 @@ class InvoiceController {
                 SELECT di.*, p.nama_produk, p.uom, p.divisi, p.singkatan 
                 FROM detail_invoice di 
                 JOIN produk p ON di.id_produk = p.id_produk
-                WHERE di.id_invoice = ?
+                WHERE di.id = ?
             """)
             detailStmt.setInt(1, idInvoice)
             val detailRs = detailStmt.executeQuery()

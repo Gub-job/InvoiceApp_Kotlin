@@ -17,6 +17,7 @@ import controller.PerusahaanTabelController
 import controller.ProformaController
 import controller.PerusahaanController
 import controller.DaftarProformaController
+import controller.DaftarInvoiceController
 
 class MainController {
     @FXML
@@ -147,14 +148,14 @@ class MainController {
                 btnProforma -> {
                     val loader = FXMLLoader(javaClass.getResource("/view/Proforma.fxml"))
                     val view = loader.load<VBox>()
-                    val controller = loader.getController<controller.ProformaController>()
+                    val controller = loader.getController<ProformaController>()
                     controller.setIdPerusahaan(idPerusahaanAktif)
                     showScreen(view)
                 }
                 btnInvoice -> {
                     val loader = FXMLLoader(javaClass.getResource("/view/Invoice.fxml"))
                     val view = loader.load<VBox>()
-                    val controller = loader.getController<controller.InvoiceController>()
+                    val controller = loader.getController<InvoiceController>()
                     controller.setIdPerusahaan(idPerusahaanAktif)
                     showScreen(view)
                 }
@@ -166,7 +167,7 @@ class MainController {
     fun bukaTransaksi() {
         if (idPerusahaanAktif == 0) {
             val alert = Alert(Alert.AlertType.WARNING)
-            alert.title = "Peringatan"
+            alert.title = "Peringatan!"
             alert.headerText = null
             alert.contentText = "Belum ada perusahaan dipilih. Silakan pilih perusahaan terlebih dahulu."
             alert.showAndWait()
@@ -174,16 +175,43 @@ class MainController {
         }
 
         try {
-            val loader = FXMLLoader(javaClass.getResource("/view/DaftarProforma.fxml"))
-            val view = loader.load<VBox>()
-            val controller = loader.getController<DaftarProformaController>()
-            controller.setIdPerusahaan(idPerusahaanAktif)
-            controller.setMainController(this)
-            showScreen(view)
+            val alert = Alert(Alert.AlertType.CONFIRMATION)
+            alert.title = "Pilih Daftar Transaksi"
+            alert.headerText = "Silakan pilih daftar transaksi yang ingin Anda lihat:"
+            alert.contentText = "Daftar Proforma atau Daftar Invoice?"
+
+            val btnDaftarProforma = ButtonType("Daftar Proforma")
+            val btnDaftarInvoice = ButtonType("Daftar Invoice")
+            val btnBatal = ButtonType.CANCEL
+
+            alert.buttonTypes.setAll(btnDaftarProforma, btnDaftarInvoice, btnBatal)
+
+            val result = alert.showAndWait()
+            if (result.isPresent) {
+                when (result.get()) {
+                    btnDaftarProforma -> {
+                        val loader = FXMLLoader(javaClass.getResource("/view/DaftarProforma.fxml"))
+                        val view = loader.load<VBox>()
+                        val controller = loader.getController<DaftarProformaController>()
+                        controller.setIdPerusahaan(idPerusahaanAktif)
+                        controller.setMainController(this)
+                        showScreen(view)
+                    }
+                    btnDaftarInvoice -> {
+                        val loader = FXMLLoader(javaClass.getResource("/view/DaftarInvoiceView.fxml"))
+                        val view = loader.load<VBox>()
+                        val controller = loader.getController<DaftarInvoiceController>()
+                        controller.setIdPerusahaan(idPerusahaanAktif)
+                        controller.setMainController(this)
+                        showScreen(view)
+                    }
+                    btnBatal -> return
+                }
+            }
         } catch (e: Exception) {
             val alert = Alert(Alert.AlertType.ERROR)
-            alert.title = "Error"
-            alert.headerText = "Gagal membuka daftar proforma"
+            alert.title = "Error!"
+            alert.headerText = "Gagal membuka daftar transaksi"
             alert.contentText = e.message
             alert.showAndWait()
         }

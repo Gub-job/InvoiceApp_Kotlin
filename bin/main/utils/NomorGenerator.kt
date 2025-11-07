@@ -64,8 +64,9 @@ object NomorGenerator {
                 val firstDayOfMonth = LocalDate.of(year, month, 1).toString()
                 val lastDayOfMonth = YearMonth.of(year, month).atEndOfMonth().toString()
 
+                val dateColumn = if (tipe == "invoice") "tanggal_invoice" else "tanggal_proforma"
                 val countStmt = conn.prepareStatement(
-                    "SELECT COUNT(*) FROM $tipe WHERE id_perusahaan = ? AND tanggal_proforma BETWEEN ? AND ?"
+                    "SELECT COUNT(*) FROM $tipe WHERE id_perusahaan = ? AND $dateColumn BETWEEN ? AND ?"
                 )
                 countStmt.setInt(1, idPerusahaan)
                 countStmt.setString(2, firstDayOfMonth)
