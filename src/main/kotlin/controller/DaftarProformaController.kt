@@ -74,17 +74,19 @@ class DaftarProformaController {
         try {
             val conn = DatabaseHelper.getConnection()
             // Modifikasi query untuk menghitung grand total yang benar
-            val stmt = conn.prepareStatement("""
-                SELECT p.id_proforma, p.no_proforma, p.tanggal_proforma, pel.nama as pelanggan_nama, 
-                       CASE 
-                           WHEN p.dp > 0 THEN p.dp + (p.dp * (p.tax / p.total))
-                           ELSE p.total_dengan_ppn 
+            val stmt = conn.prepareStatement(
+                """
+                SELECT p.id_proforma, p.no_proforma, p.tanggal_proforma, pel.nama as pelanggan_nama,
+                       CASE
+                           WHEN p.dp > 0 THEN p.dp + p.tax
+                           ELSE p.total_dengan_ppn
                        END as total
                 FROM proforma p 
                 LEFT JOIN pelanggan pel ON p.id_pelanggan = pel.id 
                 WHERE p.id_perusahaan = ? 
                 ORDER BY p.tanggal_proforma DESC, p.id_proforma DESC
-            """)
+            """
+            )
             stmt.setInt(1, idPerusahaan)
             val rs = stmt.executeQuery()
             

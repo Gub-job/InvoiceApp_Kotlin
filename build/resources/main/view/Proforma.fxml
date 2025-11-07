@@ -5,110 +5,114 @@
 <?import javafx.geometry.Insets?>
 
 <VBox xmlns:fx="http://javafx.com/fxml"
-      fx:controller="controller.ProformaController"
-      spacing="15"
-      prefWidth="800" prefHeight="600"
-      style="-fx-background-color: #FFFFFF;">
+    fx:controller="controller.ProformaController"
+    spacing="15"
+    prefWidth="800" prefHeight="600"
+    style="-fx-background-color: #FFFFFF;">
 
     <padding>
-        <Insets top="15" right="15" bottom="15" left="15"/>
+        <Insets top="15" right="15" bottom="15" left="15" />
     </padding>
 
     <!-- Judul Halaman -->
     <Label text="Form Proforma Invoice"
-           style="-fx-font-size: 20px; -fx-font-weight: bold; -fx-text-fill: #2E4A7D;"/>
+        style="-fx-font-size: 20px; -fx-font-weight: bold; -fx-text-fill: #2E4A7D;" />
 
     <!-- Form Header -->
     <GridPane hgap="10" vgap="10">
         <padding>
-            <Insets top="10" right="10" bottom="10" left="10"/>
+            <Insets top="10" right="10" bottom="10" left="10" />
         </padding>
         <columnConstraints>
-            <ColumnConstraints percentWidth="15"/>
-            <ColumnConstraints percentWidth="30"/>
-            <ColumnConstraints percentWidth="15"/>
-            <ColumnConstraints percentWidth="30"/>
+            <ColumnConstraints percentWidth="15" />
+            <ColumnConstraints percentWidth="30" />
+            <ColumnConstraints percentWidth="15" />
+            <ColumnConstraints percentWidth="30" />
         </columnConstraints>
 
         <!-- Baris 1 -->
-        <Label text="Contract Ref:" GridPane.rowIndex="0" GridPane.columnIndex="0"/>
-        <TextField fx:id="contractRefField" GridPane.rowIndex="0" GridPane.columnIndex="1"/>
+        <Label text="Contract Ref:" GridPane.rowIndex="0" GridPane.columnIndex="0" />
+        <TextField fx:id="contractRefField" GridPane.rowIndex="0" GridPane.columnIndex="1" />
 
-        <Label text="Contract Date:" GridPane.rowIndex="0" GridPane.columnIndex="2"/>
-        <DatePicker fx:id="contractDatePicker" GridPane.rowIndex="0" GridPane.columnIndex="3"/>
+        <Label text="Contract Date:" GridPane.rowIndex="0" GridPane.columnIndex="2" />
+        <DatePicker fx:id="contractDatePicker" GridPane.rowIndex="0" GridPane.columnIndex="3" />
 
         <!-- Baris 2 -->
-        <Label text="Pelanggan:" GridPane.rowIndex="1" GridPane.columnIndex="0"/>
+        <Label text="Pelanggan:" GridPane.rowIndex="1" GridPane.columnIndex="0" />
         <TextField fx:id="pelangganField" promptText="Ketik nama pelanggan..."
-                   GridPane.rowIndex="1" GridPane.columnIndex="1"/>
+            GridPane.rowIndex="1" GridPane.columnIndex="1" />
 
-        <Label text="Alamat:" GridPane.rowIndex="1" GridPane.columnIndex="2"/>
+        <Label text="Alamat:" GridPane.rowIndex="1" GridPane.columnIndex="2" />
         <TextField fx:id="alamatField" editable="false"
-                   GridPane.rowIndex="1" GridPane.columnIndex="3"/>
+            GridPane.rowIndex="1" GridPane.columnIndex="3" />
 
         <!-- Baris 3 -->
-        <Label text="Telepon:" GridPane.rowIndex="2" GridPane.columnIndex="0"/>
+        <Label text="Telepon:" GridPane.rowIndex="2" GridPane.columnIndex="0" />
         <TextField fx:id="teleponField" editable="false"
-                   GridPane.rowIndex="2" GridPane.columnIndex="1"/>
+            GridPane.rowIndex="2" GridPane.columnIndex="1" />
 
         <!-- Baris 4 -->
-        <Label text="Nomor Proforma:" GridPane.rowIndex="3" GridPane.columnIndex="0"/>
-        <TextField fx:id="nomorField" GridPane.rowIndex="3" GridPane.columnIndex="1"/>
+        <Label text="Nomor Proforma:" GridPane.rowIndex="3" GridPane.columnIndex="0" />
+        <TextField fx:id="nomorField" GridPane.rowIndex="3" GridPane.columnIndex="1" />
 
-        <Label text="Tanggal:" GridPane.rowIndex="3" GridPane.columnIndex="2"/>
-        <DatePicker fx:id="tanggalPicker" GridPane.rowIndex="3" GridPane.columnIndex="3"/>
+        <Label text="Tanggal:" GridPane.rowIndex="3" GridPane.columnIndex="2" />
+        <DatePicker fx:id="tanggalPicker" GridPane.rowIndex="3" GridPane.columnIndex="3" />
 
         <!-- Baris 5 -->
-        <Label text="DP (%):" GridPane.rowIndex="4" GridPane.columnIndex="0"/>
-        <TextField fx:id="dpField" promptText="Masukkan persen (contoh: 95)" GridPane.rowIndex="4" GridPane.columnIndex="1"/>
+        <Label text="DP (%):" GridPane.rowIndex="4" GridPane.columnIndex="0" />
+        <TextField fx:id="dpField" promptText="Masukkan persen (contoh: 95)" GridPane.rowIndex="4"
+            GridPane.columnIndex="1" />
     </GridPane>
 
     <!-- Table Produk -->
     <TableView fx:id="table" prefHeight="300">
         <columns>
-            <TableColumn fx:id="kolomNo" text="No" prefWidth="60"/>
-            <TableColumn fx:id="kolomNama" text="Nama Barang" prefWidth="200"/>
-            <TableColumn fx:id="kolomQty" text="Qty" prefWidth="80"/>
-            <TableColumn fx:id="kolomUom" text="UOM" prefWidth="80"/>
-            <TableColumn fx:id="kolomHarga" text="Unit Price" prefWidth="100"/>
-            <TableColumn fx:id="kolomTotal" text="Amount" prefWidth="120"/>
+            <TableColumn fx:id="kolomNo" text="No" prefWidth="60" />
+            <TableColumn fx:id="kolomNama" text="Nama Barang" prefWidth="200" />
+            <TableColumn fx:id="kolomQty" text="Qty" prefWidth="80" />
+            <TableColumn fx:id="kolomUom" text="UOM" prefWidth="80" />
+            <TableColumn fx:id="kolomHarga" text="Unit Price" prefWidth="100" />
+            <TableColumn fx:id="kolomTotal" text="Amount" prefWidth="120" />
         </columns>
     </TableView>
 
     <!-- Bagian Total, PPN, dan Grand Total -->
     <GridPane hgap="10" vgap="5" alignment="CENTER_RIGHT">
         <columnConstraints>
-            <ColumnConstraints halignment="RIGHT" prefWidth="150"/>
-            <ColumnConstraints prefWidth="150"/>
+            <ColumnConstraints halignment="RIGHT" prefWidth="150" />
+            <ColumnConstraints prefWidth="150" />
         </columnConstraints>
         <padding>
-            <Insets top="10" right="10" bottom="0" left="10"/>
+            <Insets top="10" right="10" bottom="0" left="10" />
         </padding>
-        <Label text="Subtotal:" GridPane.rowIndex="0" GridPane.columnIndex="0"/>
-        <Label fx:id="subtotalLabel" text="0.00" GridPane.rowIndex="0" GridPane.columnIndex="1"/>
-        
-        <Label text="DP Amount:" GridPane.rowIndex="1" GridPane.columnIndex="0"/>
-        <Label fx:id="dpAmountLabel" text="0.00" GridPane.rowIndex="1" GridPane.columnIndex="1"/>
-        
-        <Label text="PPN (%):" GridPane.rowIndex="2" GridPane.columnIndex="0"/>
-        <TextField fx:id="ppnField" text="11" GridPane.rowIndex="2" GridPane.columnIndex="1"/>
-        
-        <Label text="PPN Amount:" GridPane.rowIndex="3" GridPane.columnIndex="0"/>
-        <Label fx:id="ppnAmountLabel" text="0.00" GridPane.rowIndex="3" GridPane.columnIndex="1"/>
-        
-        <Label text="Grand Total:" style="-fx-font-weight: bold;" GridPane.rowIndex="4" GridPane.columnIndex="0"/>
-        <Label fx:id="grandTotalLabel" text="0.00" style="-fx-font-weight: bold;" GridPane.rowIndex="4" GridPane.columnIndex="1"/>
+        <Label text="Subtotal:" GridPane.rowIndex="0" GridPane.columnIndex="0" />
+        <Label fx:id="subtotalLabel" text="0.00" GridPane.rowIndex="0" GridPane.columnIndex="1" />
+
+        <Label text="DP Amount:" GridPane.rowIndex="1" GridPane.columnIndex="0" />
+        <Label fx:id="dpAmountLabel" text="0.00" GridPane.rowIndex="1" GridPane.columnIndex="1" />
+
+        <Label text="PPN (%):" GridPane.rowIndex="2" GridPane.columnIndex="0" />
+        <Label fx:id="ppnField" text="11" GridPane.rowIndex="2" GridPane.columnIndex="1" />
+
+        <Label text="PPN Amount:" GridPane.rowIndex="3" GridPane.columnIndex="0" />
+        <Label fx:id="ppnAmountLabel" text="0.00" GridPane.rowIndex="3" GridPane.columnIndex="1" />
+
+        <Label text="Grand Total:" style="-fx-font-weight: bold;" GridPane.rowIndex="4"
+            GridPane.columnIndex="0" />
+        <Label fx:id="grandTotalLabel" text="0.00" style="-fx-font-weight: bold;"
+            GridPane.rowIndex="4" GridPane.columnIndex="1" />
     </GridPane>
 
     <HBox spacing="10" alignment="CENTER">
         <padding>
-            <Insets top="10" right="10" bottom="10" left="10"/>
+            <Insets top="10" right="10" bottom="10" left="10" />
         </padding>
-        <Button fx:id="tambahBtn" text="Tambah Barang"/>
-        <Button fx:id="hapusBtn" text="Hapus Barang"/> <!-- Tombol ini untuk menghapus item di tabel -->
-        <Button fx:id="simpanBtn" text="Simpan"/>
-        <Button fx:id="konversiBtn" text="Konversi ke Invoice"/>
-        <Button fx:id="hapusProformaBtn" text="Hapus Proforma" disable="true"/> <!-- Tombol ini untuk menghapus seluruh dokumen, fx:id diubah -->
+        <Button fx:id="tambahBtn" text="Tambah Barang" />
+        <Button fx:id="hapusBtn" text="Hapus Barang" /> <!-- Tombol ini untuk menghapus item di tabel -->
+        <Button fx:id="simpanBtn" text="Simpan" />
+        <Button fx:id="konversiBtn" text="Konversi ke Invoice" />
+        <Button fx:id="hapusProformaBtn" text="Hapus Proforma" disable="true" /> <!-- Tombol ini
+        untuk menghapus seluruh dokumen, fx:id diubah -->
     </HBox>
 
 </VBox>

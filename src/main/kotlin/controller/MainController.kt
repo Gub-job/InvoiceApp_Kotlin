@@ -164,54 +164,51 @@ class MainController {
         }
     }
 
-    fun bukaTransaksi() {
+    fun bukaDaftarProforma() {
         if (idPerusahaanAktif == 0) {
             val alert = Alert(Alert.AlertType.WARNING)
             alert.title = "Peringatan!"
             alert.headerText = null
             alert.contentText = "Belum ada perusahaan dipilih. Silakan pilih perusahaan terlebih dahulu."
             alert.showAndWait()
-            return
         }
 
         try {
-            val alert = Alert(Alert.AlertType.CONFIRMATION)
-            alert.title = "Pilih Daftar Transaksi"
-            alert.headerText = "Silakan pilih daftar transaksi yang ingin Anda lihat:"
-            alert.contentText = "Daftar Proforma atau Daftar Invoice?"
-
-            val btnDaftarProforma = ButtonType("Daftar Proforma")
-            val btnDaftarInvoice = ButtonType("Daftar Invoice")
-            val btnBatal = ButtonType.CANCEL
-
-            alert.buttonTypes.setAll(btnDaftarProforma, btnDaftarInvoice, btnBatal)
-
-            val result = alert.showAndWait()
-            if (result.isPresent) {
-                when (result.get()) {
-                    btnDaftarProforma -> {
-                        val loader = FXMLLoader(javaClass.getResource("/view/DaftarProforma.fxml"))
-                        val view = loader.load<VBox>()
-                        val controller = loader.getController<DaftarProformaController>()
-                        controller.setIdPerusahaan(idPerusahaanAktif)
-                        controller.setMainController(this)
-                        showScreen(view)
-                    }
-                    btnDaftarInvoice -> {
-                        val loader = FXMLLoader(javaClass.getResource("/view/DaftarInvoiceView.fxml"))
-                        val view = loader.load<VBox>()
-                        val controller = loader.getController<DaftarInvoiceController>()
-                        controller.setIdPerusahaan(idPerusahaanAktif)
-                        controller.setMainController(this)
-                        showScreen(view)
-                    }
-                    btnBatal -> return
-                }
-            }
+            val loader = FXMLLoader(javaClass.getResource("/view/DaftarProforma.fxml"))
+            val view = loader.load<VBox>()
+            val controller = loader.getController<DaftarProformaController>()
+            controller.setIdPerusahaan(idPerusahaanAktif)
+            controller.setMainController(this)
+            showScreen(view)
         } catch (e: Exception) {
             val alert = Alert(Alert.AlertType.ERROR)
             alert.title = "Error!"
-            alert.headerText = "Gagal membuka daftar transaksi"
+            alert.headerText = "Gagal membuka daftar proforma"
+            alert.contentText = e.message
+            alert.showAndWait()
+        }
+    }
+
+    fun bukaDaftarInvoice() {
+        if (idPerusahaanAktif == 0) {
+            val alert = Alert(Alert.AlertType.WARNING)
+            alert.title = "Peringatan!"
+            alert.headerText = null
+            alert.contentText = "Belum ada perusahaan dipilih. Silakan pilih perusahaan terlebih dahulu."
+            alert.showAndWait()
+        }
+
+        try {
+            val loader = FXMLLoader(javaClass.getResource("/view/DaftarInvoiceView.fxml"))
+            val view = loader.load<VBox>()
+            val controller = loader.getController<DaftarInvoiceController>()
+            controller.setIdPerusahaan(idPerusahaanAktif)
+            controller.setMainController(this)
+            showScreen(view)
+        } catch (e: Exception) {
+            val alert = Alert(Alert.AlertType.ERROR)
+            alert.title = "Error!"
+            alert.headerText = "Gagal membuka daftar invoice"
             alert.contentText = e.message
             alert.showAndWait()
         }

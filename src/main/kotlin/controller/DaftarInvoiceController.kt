@@ -73,6 +73,9 @@ class DaftarInvoiceController {
         invoiceList.clear()
         try {
             val conn = DatabaseHelper.getConnection()
+            // PENTING: Pastikan kolom yang dibutuhkan ada sebelum query
+            ensureRequiredColumnsExist(conn)
+
             val stmt = conn.prepareStatement("""
                 SELECT i.id_invoice, i.no_invoice, i.tanggal_invoice, pel.nama as pelanggan_nama,
                        CASE
@@ -100,6 +103,42 @@ class DaftarInvoiceController {
         } catch (e: Exception) {
             showAlert("Error", "Gagal memuat daftar invoice: ${e.message}")
         }
+    }
+
+    private fun ensureRequiredColumnsExist(conn: Connection) {
+        try {
+            if (!columnExists(conn, "invoice", "no_invoice")) {
+                conn.createStatement().execute("ALTER TABLE invoice ADD COLUMN no_invoice TEXT")
+                println("Kolom no_invoice ditambahkan ke tabel invoice")
+            }
+            if (!columnExists(conn, "invoice", "tanggal_invoice")) {
+                conn.createStatement().execute("ALTER TABLE invoice ADD COLUMN tanggal_invoice TEXT")
+                println("Kolom tanggal_invoice ditambahkan ke tabel invoice")
+            }
+            if (!columnExists(conn, "invoice", "total_dengan_ppn")) {
+                conn.createStatement().execute("ALTER TABLE invoice ADD COLUMN total_dengan_ppn REAL DEFAULT 0.0")
+                println("Kolom total_dengan_ppn ditambahkan ke tabel invoice")
+            }
+        } catch (e: Exception) {
+            println("Gagal memastikan kolom invoice ada: ${e.message}")
+            // Tampilkan alert jika gagal, karena ini kritis
+            showAlert("Database Error", "Gagal memverifikasi struktur tabel invoice: ${e.message}")
+        }
+    }
+
+    private fun columnExists(conn: Connection, tableName: String, columnName: String): Boolean {
+        val checkStmt = conn.prepareStatement("""
+            SELECT COUNT(*) as count FROM pragma_table_info('$tableName') 
+            WHERE name = '$columnName'
+        """)
+        val rs = checkStmt.executeQuery()
+        var count = 0
+        if (rs.next()) {
+            count = rs.getInt("count")
+        }
+        rs.close()
+        checkStmt.close()
+        return count > 0
     }
 
     private fun buatInvoiceBaru() {

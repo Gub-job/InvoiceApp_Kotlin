@@ -39,7 +39,7 @@ class ProformaController {
     @FXML private lateinit var hapusBtn: Button
     @FXML private lateinit var tambahBtn: Button
     // Tambahkan @FXML untuk komponen PPN dari FXML
-    @FXML private lateinit var ppnField: TextField
+    @FXML private lateinit var ppnField: Label
     @FXML private lateinit var subtotalLabel: Label
     @FXML private lateinit var dpAmountLabel: Label
     @FXML private lateinit var ppnAmountLabel: Label
@@ -66,6 +66,7 @@ class ProformaController {
         CreateProformaTables.createTables()
         loadPelanggan()
         loadProduk()
+        loadDefaultTaxRate()
         // Set tanggal hari ini
         tanggalPicker.value = LocalDate.now()
     }
@@ -95,12 +96,12 @@ class ProformaController {
                     dpField.text = String.format("%.2f", dpPercentage).replace(",", ".")
                 }
 
-                val ppnAmount = rs.getDouble("tax")
+                val taxAmount = rs.getDouble("tax")
                 if (subtotal > 0) {
-                    val ppnPercentage = (ppnAmount / subtotal) * 100
+                    val ppnPercentage = (taxAmount / subtotal) * 100
                     ppnField.text = String.format("%.2f", ppnPercentage).replace(",", ".")
                 }
-
+                
                 // Load pelanggan
                 val idPelanggan = rs.getInt("id_pelanggan")
                 pelangganList.find { it.idProperty.get() == idPelanggan }?.let {
@@ -344,11 +345,6 @@ class ProformaController {
             updateNomorIfReady()
             // Menyamakan tanggal kontrak dengan tanggal proforma
             contractDatePicker.value = newDate
-        }
-
-        // Listener untuk PPN
-        ppnField.textProperty().addListener { _, _, _ ->
-            updateTotals()
         }
 
         // Listener untuk DP - hitung otomatis jika input persen
@@ -764,6 +760,21 @@ class ProformaController {
         dpAmountLabel.text = String.format("%,.2f", dpAmount)
     }
 
+    private fun loadDefaultTaxRate() {
+        val conn = DatabaseHelper.getConnection()
+        try {
+            val stmt = conn.prepareStatement("SELECT default_tax_rate FROM perusahaan WHERE id = ?")
+            stmt.setInt(1, idPerusahaan)
+            val rs = stmt.executeQuery()
+            if (rs.next()) {
+                ppnField.text = rs.getDouble("default_tax_rate").toString()
+            }
+        } catch (e: Exception) {
+            println("Gagal memuat default tax rate: ${e.message}")
+        } finally {
+            conn.close()
+        }
+    }
 
     private fun loadPelanggan() {
         val conn = DatabaseHelper.getConnection()
