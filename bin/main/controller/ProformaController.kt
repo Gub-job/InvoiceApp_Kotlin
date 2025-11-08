@@ -13,6 +13,7 @@ import model.PelangganData
 import model.ProdukData
 import utils.DatabaseHelper
 import utils.NomorGenerator
+import utils.PdfGenerator
 import utils.CreateProformaTables
 import java.sql.*
 import java.time.LocalDate
@@ -39,7 +40,7 @@ class ProformaController {
     @FXML private lateinit var hapusBtn: Button
     @FXML private lateinit var tambahBtn: Button
     // Tambahkan @FXML untuk komponen PPN dari FXML
-    @FXML private lateinit var ppnField: TextField
+    @FXML private lateinit var ppnField: Label
     @FXML private lateinit var subtotalLabel: Label
     @FXML private lateinit var dpAmountLabel: Label
     @FXML private lateinit var ppnAmountLabel: Label
@@ -66,6 +67,7 @@ class ProformaController {
         CreateProformaTables.createTables()
         loadPelanggan()
         loadProduk()
+        loadDefaultTaxRate()
         // Set tanggal hari ini
         tanggalPicker.value = LocalDate.now()
     }
@@ -95,12 +97,12 @@ class ProformaController {
                     dpField.text = String.format("%.2f", dpPercentage).replace(",", ".")
                 }
 
-                val ppnAmount = rs.getDouble("tax")
+                val taxAmount = rs.getDouble("tax")
                 if (subtotal > 0) {
-                    val ppnPercentage = (ppnAmount / subtotal) * 100
+                    val ppnPercentage = (taxAmount / subtotal) * 100
                     ppnField.text = String.format("%.2f", ppnPercentage).replace(",", ".")
                 }
-
+                
                 // Load pelanggan
                 val idPelanggan = rs.getInt("id_pelanggan")
                 pelangganList.find { it.idProperty.get() == idPelanggan }?.let {
@@ -340,15 +342,14 @@ class ProformaController {
             simpanProformaDanDetail()
         }
 
+        konversiBtn.setOnAction {
+            cetakProformaKePdf()
+        }
+
         tanggalPicker.valueProperty().addListener { _, _, newDate ->
             updateNomorIfReady()
             // Menyamakan tanggal kontrak dengan tanggal proforma
             contractDatePicker.value = newDate
-        }
-
-        // Listener untuk PPN
-        ppnField.textProperty().addListener { _, _, _ ->
-            updateTotals()
         }
 
         // Listener untuk DP - hitung otomatis jika input persen
@@ -624,6 +625,39 @@ class ProformaController {
         }
     }
 
+    private fun cetakProformaKePdf() {
+        val fileChooser = javafx.stage.FileChooser().apply {
+            title = "Simpan Proforma sebagai PDF"
+            initialFileName = "${nomorField.text.replace("/", "_")}.pdf"
+            extensionFilters.add(javafx.stage.FileChooser.ExtensionFilter("PDF Files", "*.pdf"))
+        }
+        val file = fileChooser.showSaveDialog(konversiBtn.scene.window)
+
+        if (file != null) {
+            try {
+                val data = PdfGenerator.DocumentData(
+                    documentType = "PROFORMA INVOICE",
+                    nomorDokumen = nomorField.text,
+                    tanggalDokumen = tanggalPicker.value.toString(),
+                    namaPelanggan = pelangganField.text,
+                    alamatPelanggan = alamatField.text,
+                    teleponPelanggan = teleponField.text,
+                    items = detailList.toList(),
+                    subtotal = subtotalLabel.text,
+                    dp = dpAmountLabel.text,
+                    ppn = ppnAmountLabel.text,
+                    grandTotal = grandTotalLabel.text,
+                    contractRef = contractRefField.text,
+                    contractDate = contractDatePicker.value?.toString()
+                )
+                PdfGenerator.generatePdf(data, file)
+                showAlert("Sukses", "File PDF berhasil disimpan di:\n${file.absolutePath}")
+            } catch (e: Exception) {
+                showAlert("Error", "Gagal membuat file PDF: ${e.message}")
+            }
+        }
+    }
+
     private fun showAlert(title: String, message: String) {
         val alert = Alert(Alert.AlertType.INFORMATION)
         alert.title = title
@@ -663,8 +697,11 @@ class ProformaController {
             listView.selectionModel.selectFirst()
             
             if (filtered.isNotEmpty()) {
-                val screenBounds: Bounds = pelangganField.localToScreen(pelangganField.boundsInLocal)
-                popup.show(pelangganField, screenBounds.minX, screenBounds.minY + screenBounds.height)
+                // Hanya tampilkan popup jika field sudah terlihat di layar
+                if (pelangganField.scene?.window?.isShowing == true) {
+                    val screenBounds: Bounds = pelangganField.localToScreen(pelangganField.boundsInLocal)
+                    popup.show(pelangganField, screenBounds.minX, screenBounds.minY + screenBounds.height)
+                }
             } else {
                 popup.hide()
             }
@@ -764,6 +801,21 @@ class ProformaController {
         dpAmountLabel.text = String.format("%,.2f", dpAmount)
     }
 
+    private fun loadDefaultTaxRate() {
+        val conn = DatabaseHelper.getConnection()
+        try {
+            val stmt = conn.prepareStatement("SELECT default_tax_rate FROM perusahaan WHERE id = ?")
+            stmt.setInt(1, idPerusahaan)
+            val rs = stmt.executeQuery()
+            if (rs.next()) {
+                ppnField.text = rs.getDouble("default_tax_rate").toString()
+            }
+        } catch (e: Exception) {
+            println("Gagal memuat default tax rate: ${e.message}")
+        } finally {
+            conn.close()
+        }
+    }
 
     private fun loadPelanggan() {
         val conn = DatabaseHelper.getConnection()

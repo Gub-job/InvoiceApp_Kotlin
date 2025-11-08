@@ -74,17 +74,19 @@ class DaftarProformaController {
         try {
             val conn = DatabaseHelper.getConnection()
             // Modifikasi query untuk menghitung grand total yang benar
-            val stmt = conn.prepareStatement("""
-                SELECT p.id_proforma, p.no_proforma, p.tanggal_proforma, pel.nama as pelanggan_nama, 
-                       CASE 
-                           WHEN p.dp > 0 THEN p.dp + (p.dp * (p.tax / p.total))
-                           ELSE p.total_dengan_ppn 
+            val stmt = conn.prepareStatement(
+                """
+                SELECT p.id_proforma, p.no_proforma, p.tanggal_proforma, pel.nama as pelanggan_nama,
+                       CASE
+                           WHEN p.dp > 0 THEN p.dp + p.tax
+                           ELSE p.total_dengan_ppn
                        END as total
                 FROM proforma p 
                 LEFT JOIN pelanggan pel ON p.id_pelanggan = pel.id 
                 WHERE p.id_perusahaan = ? 
                 ORDER BY p.tanggal_proforma DESC, p.id_proforma DESC
-            """)
+            """
+            )
             stmt.setInt(1, idPerusahaan)
             val rs = stmt.executeQuery()
             
@@ -105,27 +107,38 @@ class DaftarProformaController {
     
     private fun buatProformaBaru() {
         try {
-            val loader = FXMLLoader(javaClass.getResource("/view/Proforma.fxml"))
+            val resourceUrl = javaClass.getResource("/view/Proforma.fxml")
+            if (resourceUrl == null) {
+                showAlert("Error", "File FXML tidak ditemukan: /view/Proforma.fxml")
+                return
+            }
+            
+            val loader = FXMLLoader(resourceUrl)
             val view = loader.load<VBox>()
             val controller = loader.getController<ProformaController>()
             controller.setIdPerusahaan(idPerusahaan)
             
-            // Tampilkan di main pane
             mainController?.showScreen(view)
         } catch (e: Exception) {
+            e.printStackTrace()
             showAlert("Error", "Gagal membuka form proforma: ${e.message}")
         }
     }
 
     private fun editProforma(proforma: ProformaData) {
         try {
-            val loader = FXMLLoader(javaClass.getResource("/view/Proforma.fxml"))
+            val resourceUrl = javaClass.getResource("/view/Proforma.fxml")
+            if (resourceUrl == null) {
+                showAlert("Error", "File FXML tidak ditemukan: /view/Proforma.fxml")
+                return
+            }
+            
+            val loader = FXMLLoader(resourceUrl)
             val view = loader.load<VBox>()
             val controller = loader.getController<ProformaController>()
             controller.setIdPerusahaan(idPerusahaan)
             controller.loadProforma(proforma.idProperty.get())
 
-            // Buat stage baru untuk dialog edit
             val editStage = Stage()
             editStage.title = "Edit Proforma - ${proforma.nomorProperty.get()}"
             editStage.initModality(Modality.APPLICATION_MODAL)
@@ -135,12 +148,10 @@ class DaftarProformaController {
             editStage.scene = scene
             editStage.isResizable = false
 
-            // Tampilkan dialog dan tunggu sampai ditutup
             editStage.showAndWait()
-
-            // Setelah dialog ditutup, refresh daftar proforma
             loadProformaList()
         } catch (e: Exception) {
+            e.printStackTrace()
             showAlert("Error", "Gagal membuka proforma untuk diedit: ${e.message}")
         }
     }

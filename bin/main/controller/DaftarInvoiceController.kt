@@ -11,6 +11,7 @@ import javafx.stage.Stage
 import model.InvoiceData
 import utils.DatabaseHelper
 import java.sql.Connection
+import java.time.LocalDate
 
 class DaftarInvoiceController {
 
@@ -58,8 +59,8 @@ class DaftarInvoiceController {
 
         refreshBtn.setOnAction { loadInvoiceList() }
         buatBaruBtn.setOnAction { buatInvoiceBaru() }
-
-        // Tambahkan listener untuk double-click pada baris tabel
+        
+        // Double-click untuk membuka invoice dalam jendela terpisah
         invoiceTable.setOnMouseClicked { event ->
             if (event.clickCount == 2) {
                 invoiceTable.selectionModel.selectedItem?.let { selectedInvoice ->
@@ -74,15 +75,16 @@ class DaftarInvoiceController {
         try {
             val conn = DatabaseHelper.getConnection()
             val stmt = conn.prepareStatement("""
-                SELECT i.id_invoice, i.no_invoice, i.tanggal_invoice, pel.nama as pelanggan_nama,
+                SELECT i.id_invoice, i.nomor_invoice, i.tanggal,
+                       pel.nama as pelanggan_nama,
                        CASE
-                           WHEN i.dp > 0 THEN i.dp + (i.dp * (i.tax / 100.0)) -- Asumsi tax adalah persentase
+                           WHEN i.dp > 0 THEN i.dp + i.tax
                            ELSE i.total_dengan_ppn
                        END as total
                 FROM invoice i
                 LEFT JOIN pelanggan pel ON i.id_pelanggan = pel.id
                 WHERE i.id_perusahaan = ?
-                ORDER BY i.tanggal_invoice DESC, i.id_invoice DESC
+                ORDER BY i.tanggal DESC, i.id_invoice DESC
             """)
             stmt.setInt(1, idPerusahaan)
             val rs = stmt.executeQuery()
@@ -90,8 +92,8 @@ class DaftarInvoiceController {
             while (rs.next()) {
                 invoiceList.add(InvoiceData(
                     rs.getInt("id_invoice"),
-                    rs.getString("no_invoice") ?: "",
-                    rs.getString("tanggal_invoice") ?: "",
+                    rs.getString("nomor_invoice") ?: "",
+                    rs.getString("tanggal") ?: LocalDate.now().toString(),
                     rs.getString("pelanggan_nama") ?: "Tidak ada",
                     rs.getDouble("total")
                 ))
@@ -115,7 +117,7 @@ class DaftarInvoiceController {
             showAlert("Error", "Gagal membuka form invoice: ${e.message}")
         }
     }
-
+    
     private fun editInvoice(invoice: InvoiceData) {
         try {
             val loader = FXMLLoader(javaClass.getResource("/view/Invoice.fxml"))
@@ -124,11 +126,23 @@ class DaftarInvoiceController {
             controller.setIdPerusahaan(idPerusahaan)
             controller.loadInvoice(invoice.idProperty.get())
 
-            mainController?.showScreen(view)
+            val editStage = Stage()
+            editStage.title = "Edit Invoice - ${invoice.nomorProperty.get()}"
+            editStage.initModality(Modality.APPLICATION_MODAL)
+            editStage.initOwner(invoiceTable.scene.window)
+            
+            val scene = Scene(view)
+            editStage.scene = scene
+            editStage.isResizable = false
+
+            editStage.showAndWait()
+            loadInvoiceList()
         } catch (e: Exception) {
             showAlert("Error", "Gagal membuka invoice untuk diedit: ${e.message}")
         }
     }
+
+
 
     private fun showAlert(title: String, message: String) {
         val alert = Alert(Alert.AlertType.INFORMATION)

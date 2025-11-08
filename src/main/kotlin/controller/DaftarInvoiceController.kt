@@ -11,6 +11,7 @@ import javafx.stage.Stage
 import model.InvoiceData
 import utils.DatabaseHelper
 import java.sql.Connection
+import java.time.LocalDate
 
 class DaftarInvoiceController {
 
@@ -58,8 +59,8 @@ class DaftarInvoiceController {
 
         refreshBtn.setOnAction { loadInvoiceList() }
         buatBaruBtn.setOnAction { buatInvoiceBaru() }
-
-        // Tambahkan listener untuk double-click pada baris tabel
+        
+        // Double-click untuk membuka invoice dalam jendela terpisah
         invoiceTable.setOnMouseClicked { event ->
             if (event.clickCount == 2) {
                 invoiceTable.selectionModel.selectedItem?.let { selectedInvoice ->
@@ -73,19 +74,17 @@ class DaftarInvoiceController {
         invoiceList.clear()
         try {
             val conn = DatabaseHelper.getConnection()
-            // PENTING: Pastikan kolom yang dibutuhkan ada sebelum query
-            ensureRequiredColumnsExist(conn)
-
             val stmt = conn.prepareStatement("""
-                SELECT i.id_invoice, i.no_invoice, i.tanggal_invoice, pel.nama as pelanggan_nama,
+                SELECT i.id_invoice, i.nomor_invoice, i.tanggal,
+                       pel.nama as pelanggan_nama,
                        CASE
-                           WHEN i.dp > 0 THEN i.dp + (i.dp * (i.tax / 100.0)) -- Asumsi tax adalah persentase
+                           WHEN i.dp > 0 THEN i.dp + i.tax
                            ELSE i.total_dengan_ppn
                        END as total
                 FROM invoice i
                 LEFT JOIN pelanggan pel ON i.id_pelanggan = pel.id
                 WHERE i.id_perusahaan = ?
-                ORDER BY i.tanggal_invoice DESC, i.id_invoice DESC
+                ORDER BY i.tanggal DESC, i.id_invoice DESC
             """)
             stmt.setInt(1, idPerusahaan)
             val rs = stmt.executeQuery()
@@ -93,8 +92,8 @@ class DaftarInvoiceController {
             while (rs.next()) {
                 invoiceList.add(InvoiceData(
                     rs.getInt("id_invoice"),
-                    rs.getString("no_invoice") ?: "",
-                    rs.getString("tanggal_invoice") ?: "",
+                    rs.getString("nomor_invoice") ?: "",
+                    rs.getString("tanggal") ?: LocalDate.now().toString(),
                     rs.getString("pelanggan_nama") ?: "Tidak ada",
                     rs.getDouble("total")
                 ))
@@ -103,42 +102,6 @@ class DaftarInvoiceController {
         } catch (e: Exception) {
             showAlert("Error", "Gagal memuat daftar invoice: ${e.message}")
         }
-    }
-
-    private fun ensureRequiredColumnsExist(conn: Connection) {
-        try {
-            if (!columnExists(conn, "invoice", "no_invoice")) {
-                conn.createStatement().execute("ALTER TABLE invoice ADD COLUMN no_invoice TEXT")
-                println("Kolom no_invoice ditambahkan ke tabel invoice")
-            }
-            if (!columnExists(conn, "invoice", "tanggal_invoice")) {
-                conn.createStatement().execute("ALTER TABLE invoice ADD COLUMN tanggal_invoice TEXT")
-                println("Kolom tanggal_invoice ditambahkan ke tabel invoice")
-            }
-            if (!columnExists(conn, "invoice", "total_dengan_ppn")) {
-                conn.createStatement().execute("ALTER TABLE invoice ADD COLUMN total_dengan_ppn REAL DEFAULT 0.0")
-                println("Kolom total_dengan_ppn ditambahkan ke tabel invoice")
-            }
-        } catch (e: Exception) {
-            println("Gagal memastikan kolom invoice ada: ${e.message}")
-            // Tampilkan alert jika gagal, karena ini kritis
-            showAlert("Database Error", "Gagal memverifikasi struktur tabel invoice: ${e.message}")
-        }
-    }
-
-    private fun columnExists(conn: Connection, tableName: String, columnName: String): Boolean {
-        val checkStmt = conn.prepareStatement("""
-            SELECT COUNT(*) as count FROM pragma_table_info('$tableName') 
-            WHERE name = '$columnName'
-        """)
-        val rs = checkStmt.executeQuery()
-        var count = 0
-        if (rs.next()) {
-            count = rs.getInt("count")
-        }
-        rs.close()
-        checkStmt.close()
-        return count > 0
     }
 
     private fun buatInvoiceBaru() {
@@ -154,7 +117,7 @@ class DaftarInvoiceController {
             showAlert("Error", "Gagal membuka form invoice: ${e.message}")
         }
     }
-
+    
     private fun editInvoice(invoice: InvoiceData) {
         try {
             val loader = FXMLLoader(javaClass.getResource("/view/Invoice.fxml"))
@@ -163,11 +126,23 @@ class DaftarInvoiceController {
             controller.setIdPerusahaan(idPerusahaan)
             controller.loadInvoice(invoice.idProperty.get())
 
-            mainController?.showScreen(view)
+            val editStage = Stage()
+            editStage.title = "Edit Invoice - ${invoice.nomorProperty.get()}"
+            editStage.initModality(Modality.APPLICATION_MODAL)
+            editStage.initOwner(invoiceTable.scene.window)
+            
+            val scene = Scene(view)
+            editStage.scene = scene
+            editStage.isResizable = false
+
+            editStage.showAndWait()
+            loadInvoiceList()
         } catch (e: Exception) {
             showAlert("Error", "Gagal membuka invoice untuk diedit: ${e.message}")
         }
     }
+
+
 
     private fun showAlert(title: String, message: String) {
         val alert = Alert(Alert.AlertType.INFORMATION)

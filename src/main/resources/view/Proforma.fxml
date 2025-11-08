@@ -110,7 +110,7 @@
         <Button fx:id="tambahBtn" text="Tambah Barang" />
         <Button fx:id="hapusBtn" text="Hapus Barang" /> <!-- Tombol ini untuk menghapus item di tabel -->
         <Button fx:id="simpanBtn" text="Simpan" />
-        <Button fx:id="konversiBtn" text="Konversi ke Invoice" />
+        <Button fx:id="konversiBtn" text="Cetak" />
         <Button fx:id="hapusProformaBtn" text="Hapus Proforma" disable="true" /> <!-- Tombol ini
         untuk menghapus seluruh dokumen, fx:id diubah -->
     </HBox>

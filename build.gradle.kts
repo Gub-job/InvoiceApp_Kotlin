@@ -13,6 +13,10 @@ dependencies {
     implementation("org.xerial:sqlite-jdbc:3.46.0.0")
     implementation("org.openjfx:javafx-controls:17.0.16")
     implementation("org.openjfx:javafx-fxml:17.0.16")
+
+    // Dependensi untuk membuat PDF
+    implementation("com.itextpdf:kernel:7.2.5")
+    implementation("com.itextpdf:layout:7.2.5")
 }
 
 javafx {

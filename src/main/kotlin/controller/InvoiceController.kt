@@ -7,10 +7,12 @@ import javafx.geometry.Bounds
 import javafx.scene.control.*
 import javafx.scene.control.cell.TextFieldTableCell
 import javafx.stage.Popup
+import javafx.stage.Stage
 import javafx.util.Callback
 import model.PelangganData
 import model.ProdukData
 import utils.DatabaseHelper
+import utils.PdfGenerator
 import utils.NomorGenerator
 import utils.CreateProformaTables
 import java.sql.Connection
@@ -70,6 +72,7 @@ class InvoiceController {
     private var selectedPelanggan: PelangganData? = null
     private var idPerusahaan: Int = 0
     private var idInvoiceBaru: Int = 0
+    private var isEditMode = false
     private var currentEditingCell: TextFieldTableCell<ProdukData, String>? = null
 
     fun setIdPerusahaan(id: Int) {
@@ -80,6 +83,7 @@ class InvoiceController {
         loadProduk()
         loadDefaultTaxRate()
         loadProformaRefs()
+        ensureContractColumnsExist() // Pastikan kolom referensi ada
         // Kosongkan nomor field, akan diisi setelah produk ditambahkan
         nomorField.text = ""
         // Set tanggal hari ini
@@ -88,18 +92,28 @@ class InvoiceController {
 
     fun loadInvoice(idInvoice: Int) {
         this.idInvoiceBaru = idInvoice
+        this.isEditMode = true // PENTING: Aktifkan mode edit
         simpanBtn.text = "Simpan" // Ganti teks tombol jadi "Simpan" untuk mode edit
 
         val conn = DatabaseHelper.getConnection()
         try {
+            // Pastikan kolom yang dibutuhkan ada sebelum query
+            ensureContractColumnsExist(conn)
+
             // 1. Load data master invoice
-            val stmt = conn.prepareStatement("SELECT * FROM invoice WHERE id_invoice = ?")
+            val stmt = conn.prepareStatement("SELECT * FROM invoice WHERE id_invoice = ?") // Menggunakan nama kolom yang konsisten
             stmt.setInt(1, idInvoice)
             val rs = stmt.executeQuery()
 
             if (rs.next()) {
-                nomorField.text = rs.getString("no_invoice")
-                tanggalPicker.value = LocalDate.parse(rs.getString("tanggal_invoice"))
+                nomorField.text = rs.getString("nomor_invoice") // FIX: ganti ke nomor_invoice
+                try {
+                    tanggalPicker.value = LocalDate.parse(rs.getString("tanggal")) // FIX: ganti ke tanggal
+                } catch (e: Exception) {
+                    tanggalPicker.value = LocalDate.now() // Fallback ke tanggal hari ini jika parse gagal
+                }
+                contractRefField.text = rs.getString("contract_ref")
+                rs.getString("contract_date")?.let { contractDatePicker.value = LocalDate.parse(it) }
                 
                 val dpAmount = rs.getDouble("dp")
                 val subtotal = rs.getDouble("total") // Ambil subtotal dari database
@@ -145,6 +159,30 @@ class InvoiceController {
             showAlert("Error", "Gagal memuat data invoice: ${e.message}")
         } finally {
             conn.close()
+        }
+    }
+
+    private fun ensureContractColumnsExist(conn: Connection? = null) {
+        val connection = conn ?: DatabaseHelper.getConnection()
+        try {
+            val metaData = connection.metaData
+            var rs = metaData.getColumns(null, null, "invoice", "contract_ref")
+            if (!rs.next()) {
+                connection.createStatement().execute("ALTER TABLE invoice ADD COLUMN contract_ref TEXT")
+                println("Kolom 'contract_ref' ditambahkan ke tabel invoice.")
+            }
+            rs = metaData.getColumns(null, null, "invoice", "contract_date")
+            if (!rs.next()) {
+                connection.createStatement().execute("ALTER TABLE invoice ADD COLUMN contract_date TEXT")
+                println("Kolom 'contract_date' ditambahkan ke tabel invoice.")
+            }
+        } catch (e: Exception) {
+            println("Gagal memastikan kolom referensi kontrak ada: ${e.message}")
+        } finally {
+            // Hanya tutup koneksi jika kita yang membuatnya
+            if (conn == null) {
+                connection.close()
+            }
         }
     }
 
@@ -279,11 +317,15 @@ class InvoiceController {
         }
 
         simpanBtn.setOnAction {
-            simpanInvoiceDanDetail()
+            if (isEditMode) {
+                updateInvoiceDanDetail()
+            } else {
+                simpanInvoiceDanDetail()
+            }
         }
 
         cetakBtn.setOnAction {
-            showAlert("Informasi", "Fitur cetak belum diimplementasikan.")
+            cetakInvoiceKePdf()
         }
 
         // Listener untuk tanggal - update nomor jika sudah ada produk
@@ -312,8 +354,11 @@ class InvoiceController {
             }
             proformaRefListView.items.setAll(filtered)
             if (filtered.isNotEmpty()) {
-                val screenBounds: Bounds = contractRefField.localToScreen(contractRefField.boundsInLocal)
-                proformaRefPopup.show(contractRefField, screenBounds.minX, screenBounds.minY + screenBounds.height)
+                // Hanya tampilkan popup jika field sudah terlihat di layar
+                if (contractRefField.scene?.window?.isShowing == true) {
+                    val screenBounds: Bounds = contractRefField.localToScreen(contractRefField.boundsInLocal)
+                    proformaRefPopup.show(contractRefField, screenBounds.minX, screenBounds.minY + screenBounds.height)
+                }
             } else {
                 proformaRefPopup.hide()
             }
@@ -549,8 +594,8 @@ class InvoiceController {
             // 3. Siapkan statement INSERT dengan semua kolom yang dibutuhkan
             val stmt = conn.prepareStatement(
                 """
-                INSERT INTO invoice (id_perusahaan, id_pelanggan, nomor_invoice, tanggal, dp, tax, total, total_dengan_ppn)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO invoice (id_perusahaan, id_pelanggan, nomor_invoice, tanggal, dp, tax, total, total_dengan_ppn, contract_ref, contract_date)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 Statement.RETURN_GENERATED_KEYS
             )
@@ -562,6 +607,8 @@ class InvoiceController {
             stmt.setDouble(6, ppnAmount)      // Simpan PPN amount
             stmt.setDouble(7, subtotal)       // Simpan subtotal (kolom 'total')
             stmt.setDouble(8, grandTotal)     // Simpan grand total (kolom 'total_dengan_ppn')
+            stmt.setString(9, contractRefField.text) // Simpan contract ref
+            stmt.setString(10, contractDatePicker.value?.toString()) // Simpan contract date
             stmt.executeUpdate()
 
             val rs = stmt.generatedKeys
@@ -581,6 +628,7 @@ class InvoiceController {
             }
 
             conn.commit()
+            isEditMode = true // Setelah simpan, otomatis masuk mode edit
             showAlert("Sukses", "Invoice berhasil disimpan.")
         } catch (e: Exception) {
             conn.rollback()
@@ -592,6 +640,103 @@ class InvoiceController {
             showAlert("Error", "Gagal menyimpan invoice: ${e.message}")
         } finally {
             conn.close()
+        }
+    }
+
+    private fun updateInvoiceDanDetail() {
+        val conn = DatabaseHelper.getConnection()
+        conn.autoCommit = false
+        try {
+            // 1. Hitung semua nilai
+            val subtotal = detailList.sumOf { it.totalProperty.get().replace(",", ".").toDoubleOrNull() ?: 0.0 }
+            val ppnRate = ppnField.text.toDoubleOrNull() ?: 0.0
+            val dpPercentage = dpField.text.toDoubleOrNull() ?: 0.0
+            val dpAmount = subtotal * (dpPercentage / 100.0)
+            val ppnAmount = if (dpAmount > 0) dpAmount * (ppnRate / 100.0) else subtotal * (ppnRate / 100.0)
+            val grandTotal = if (dpAmount > 0) dpAmount + ppnAmount else subtotal + ppnAmount
+
+            // 2. Siapkan statement UPDATE
+            val stmt = conn.prepareStatement(
+                """
+                UPDATE invoice SET
+                    id_pelanggan = ?, nomor_invoice = ?, tanggal = ?, dp = ?, tax = ?,
+                    total = ?, total_dengan_ppn = ?, contract_ref = ?, contract_date = ?
+                WHERE id_invoice = ?
+                """
+            )
+            stmt.setInt(1, selectedPelanggan?.idProperty?.get() ?: 0)
+            stmt.setString(2, nomorField.text)
+            stmt.setString(3, tanggalPicker.value?.toString())
+            stmt.setDouble(4, dpAmount)
+            stmt.setDouble(5, ppnAmount)
+            stmt.setDouble(6, subtotal)
+            stmt.setDouble(7, grandTotal)
+            stmt.setString(8, contractRefField.text)
+            stmt.setString(9, contractDatePicker.value?.toString())
+            stmt.setInt(10, idInvoiceBaru) // WHERE clause
+            stmt.executeUpdate()
+
+            // 3. Hapus detail lama dan masukkan yang baru
+            val deleteStmt = conn.prepareStatement("DELETE FROM detail_invoice WHERE id_invoice = ?")
+            deleteStmt.setInt(1, idInvoiceBaru)
+            deleteStmt.executeUpdate()
+
+            for (produk in detailList) {
+                val detailStmt = conn.prepareStatement(
+                    "INSERT INTO detail_invoice (id_invoice, id_produk, qty, harga, total) VALUES (?, ?, ?, ?, ?)"
+                )
+                detailStmt.setInt(1, idInvoiceBaru)
+                detailStmt.setInt(2, produk.idProperty.get())
+                detailStmt.setDouble(3, produk.qtyProperty.get().toDoubleOrNull() ?: 0.0)
+                detailStmt.setDouble(4, produk.hargaProperty.get().toDoubleOrNull() ?: 0.0)
+                detailStmt.setDouble(5, produk.totalProperty.get().toDoubleOrNull() ?: 0.0)
+                detailStmt.executeUpdate()
+            }
+
+            conn.commit()
+            showAlert("Sukses", "Invoice berhasil diupdate.")
+
+            // Tutup jendela setelah update berhasil
+            (simpanBtn.scene.window as? Stage)?.close()
+
+        } catch (e: Exception) {
+            conn.rollback()
+            showAlert("Error", "Gagal mengupdate invoice: ${e.message}")
+        } finally {
+            conn.close()
+        }
+    }
+
+    private fun cetakInvoiceKePdf() {
+        val fileChooser = javafx.stage.FileChooser().apply {
+            title = "Simpan Invoice sebagai PDF"
+            initialFileName = "${nomorField.text.replace("/", "_")}.pdf"
+            extensionFilters.add(javafx.stage.FileChooser.ExtensionFilter("PDF Files", "*.pdf"))
+        }
+        val file = fileChooser.showSaveDialog(cetakBtn.scene.window)
+
+        if (file != null) {
+            try {
+                val data = PdfGenerator.DocumentData(
+                    documentType = "INVOICE",
+                    nomorDokumen = nomorField.text,
+                    tanggalDokumen = tanggalPicker.value.toString(),
+                    namaPelanggan = pelangganField.text,
+                    alamatPelanggan = alamatField.text,
+                    teleponPelanggan = teleponField.text,
+                    items = detailList.toList(),
+                    subtotal = subtotalLabel.text,
+                    dp = dpAmountLabel.text,
+                    ppn = ppnAmountLabel.text,
+                    grandTotal = grandTotalLabel.text,
+                    contractRef = contractRefField.text,
+                    contractDate = contractDatePicker.value?.toString()
+                )
+                PdfGenerator.generatePdf(data, file)
+                showAlert("Sukses", "File PDF berhasil disimpan di:\n${file.absolutePath}")
+            } catch (e: Exception) {
+                showAlert("Error", "Gagal membuat file PDF: ${e.message}")
+            }
         }
     }
 
@@ -631,8 +776,11 @@ class InvoiceController {
             listView.selectionModel.selectFirst()
 
             if (filtered.isNotEmpty()) {
-                val screenBounds: Bounds = pelangganField.localToScreen(pelangganField.boundsInLocal)
-                popup.show(pelangganField, screenBounds.minX, screenBounds.minY + screenBounds.height)
+                // Hanya tampilkan popup jika field sudah terlihat di layar
+                if (pelangganField.scene?.window?.isShowing == true) {
+                    val screenBounds: Bounds = pelangganField.localToScreen(pelangganField.boundsInLocal)
+                    popup.show(pelangganField, screenBounds.minX, screenBounds.minY + screenBounds.height)
+                }
             } else {
                 popup.hide()
             }
