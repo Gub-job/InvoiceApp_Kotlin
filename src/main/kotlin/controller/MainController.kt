@@ -18,6 +18,7 @@ import controller.ProformaController
 import controller.PerusahaanController
 import controller.DaftarProformaController
 import controller.DaftarInvoiceController
+import controller.LaporanPenjualanController
 
 class MainController {
     @FXML
@@ -51,8 +52,8 @@ class MainController {
         }
 
         try {
-            val loader = FXMLLoader(javaClass.getResource("/view/PerusahaanTableView.fxml"))
-            val content = loader.load<VBox>()
+            val loader = FXMLLoader(javaClass.getResource("/view/PerusahaanTableView.fxml")) //
+            val content = loader.load<ScrollPane>() // Mengubah tipe menjadi ScrollPane
             val controller = loader.getController<controller.PerusahaanTabelController>()
             controller.setPerusahaanId(idPerusahaanAktif) // kirim ID perusahaan aktif
             mainPane.center = content
@@ -219,7 +220,21 @@ class MainController {
     }
 
     fun bukaLaporan(event: ActionEvent) {
-        println("Buka laporan penjualan")
+        if (idPerusahaanAktif == 0) {
+            showAlert(Alert.AlertType.WARNING, "Peringatan", "Belum ada perusahaan dipilih. Silakan pilih perusahaan terlebih dahulu.")
+            return
+        }
+
+        try {
+            val loader = FXMLLoader(javaClass.getResource("/view/LaporanPenjualanView.fxml"))
+            val content = loader.load<VBox>()
+            val controller = loader.getController<LaporanPenjualanController>()
+            controller.setPerusahaanId(idPerusahaanAktif)
+            mainPane.center = content
+        } catch (e: Exception) {
+            e.printStackTrace()
+            showAlert(Alert.AlertType.ERROR, "Error", "Gagal membuka halaman laporan penjualan: ${e.message}")
+        }
     }
 
     fun onGantiPerusahaanClicked() {

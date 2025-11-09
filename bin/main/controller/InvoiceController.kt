@@ -11,8 +11,7 @@ import javafx.stage.Stage
 import javafx.util.Callback
 import model.PelangganData
 import model.ProdukData
-import utils.DatabaseHelper
-import utils.PdfGenerator
+import model.DocumentData
 import utils.NomorGenerator
 import utils.CreateProformaTables
 import java.sql.Connection
@@ -717,7 +716,7 @@ class InvoiceController {
 
         if (file != null) {
             try {
-                val data = PdfGenerator.DocumentData(
+                val data = model.DocumentData(
                     documentType = "INVOICE",
                     nomorDokumen = nomorField.text,
                     tanggalDokumen = tanggalPicker.value.toString(),
@@ -732,7 +731,10 @@ class InvoiceController {
                     contractRef = contractRefField.text,
                     contractDate = contractDatePicker.value?.toString()
                 )
-                PdfGenerator.generatePdf(data, file)
+                // Ganti ke TemplatePdfGenerator
+                file.outputStream().use { stream ->
+                    utils.TemplatePdfGenerator.generatePdf(data, stream)
+                }
                 showAlert("Sukses", "File PDF berhasil disimpan di:\n${file.absolutePath}")
             } catch (e: Exception) {
                 showAlert("Error", "Gagal membuat file PDF: ${e.message}")

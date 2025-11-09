@@ -25,13 +25,21 @@ class PerusahaanTabelController {
     @FXML private lateinit var lokasiBankField: TextField
     @FXML private lateinit var namaPemilikField: TextField
     @FXML private lateinit var jabatanPemilikField: TextField
+    @FXML private lateinit var adminField: TextField
     @FXML private lateinit var logoView: ImageView
     @FXML private lateinit var gantiLogoBtn: Button
 
     fun setPerusahaanId(id: Int) {
-        idPerusahaan = id
+        this.idPerusahaan = id
+        // Panggil loadData di sini, setelah idPerusahaan di-set.
+        // Ini aman karena setPerusahaanId dipanggil setelah FXML selesai di-load.
         loadData()
-        setupGantiLogoButton()
+    }
+
+    @FXML
+    fun initialize() {
+        // Inisialisasi sekarang hanya untuk setup awal, seperti event handler.
+        // setupGantiLogoButton() tidak perlu dipanggil di sini karena sudah diatur di FXML onAction
     }
 
     private fun loadData() {
@@ -57,6 +65,7 @@ class PerusahaanTabelController {
             lokasiBankField.text = rs.getString("lokasi_kantor_bank")
             namaPemilikField.text = rs.getString("nama_pemilik")
             jabatanPemilikField.text = rs.getString("jabatan_pemilik")
+            adminField.text = rs.getString("nama_admin")
             logoPath = rs.getString("logo_path")
 
             if (!logoPath.isNullOrEmpty() && File(logoPath!!).exists()) {
@@ -66,19 +75,19 @@ class PerusahaanTabelController {
         conn.close()
     }
 
+    @FXML // Ini adalah event handler untuk tombol, jadi @FXML tetap diperlukan
     private fun setupGantiLogoButton() {
-        gantiLogoBtn.setOnAction {
-            val fileChooser = FileChooser()
-            fileChooser.title = "Pilih Logo Perusahaan"
-            fileChooser.extensionFilters.addAll(
-                FileChooser.ExtensionFilter("Gambar", "*.png", "*.jpg", "*.jpeg")
-            )
+        val fileChooser = FileChooser()
+        fileChooser.title = "Pilih Logo Perusahaan"
+        fileChooser.extensionFilters.addAll(
+            FileChooser.ExtensionFilter("Gambar", "*.png", "*.jpg", "*.jpeg")
+        )
 
-            val file = fileChooser.showOpenDialog(null)
-            if (file != null) {
-                logoPath = file.absolutePath
-                logoView.image = Image("file:${file.absolutePath}")
-            }
+        // Menggunakan showOpenDialog dari window yang ada untuk konsistensi
+        val file = fileChooser.showOpenDialog(gantiLogoBtn.scene.window)
+        if (file != null) {
+            logoPath = file.absolutePath
+            logoView.image = Image("file:${file.absolutePath}")
         }
     }
 
@@ -87,9 +96,9 @@ class PerusahaanTabelController {
         val conn = DatabaseHelper.getConnection()
         val stmt = conn.prepareStatement(
             """UPDATE perusahaan SET 
-                nama=?, alamat=?, telepon=?, fax=?, HP=?, no_rek=?, 
-                nama_bank=?, lokasi_kantor_bank=?, nama_pemilik=?, 
-                jabatan_pemilik=?, logo_path=? WHERE id=?"""
+                nama=?, alamat=?, telepon=?, fax=?, HP=?, no_rek=?,
+                nama_bank=?, lokasi_kantor_bank=?, nama_pemilik=?,
+                jabatan_pemilik=?, logo_path=?, nama_admin=? WHERE id=?"""
         )
 
         stmt.setString(1, namaField.text)
@@ -103,7 +112,8 @@ class PerusahaanTabelController {
         stmt.setString(9, namaPemilikField.text)
         stmt.setString(10, jabatanPemilikField.text)
         stmt.setString(11, logoPath)
-        stmt.setInt(12, idPerusahaan)
+        stmt.setString(12, adminField.text)
+        stmt.setInt(13, idPerusahaan)
 
         stmt.executeUpdate()
         conn.close()

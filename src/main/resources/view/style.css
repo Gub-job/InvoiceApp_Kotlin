@@ -1,0 +1,60 @@
+.root {
+    -fx-font-family: "Segoe UI", Arial, sans-serif;
+    -fx-background-color: #f8fafc; /* Light gray background */
+}
+
+.form-title {
+    -fx-font-size: 24px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #1e293b; /* Dark blue-gray text */
+}
+
+.form-grid .label {
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #475569; /* Medium gray text */
+}
+
+.form-field {
+    -fx-font-size: 14px;
+    -fx-background-color: #ffffff;
+    -fx-border-color: #cbd5e1; /* Light gray border */
+    -fx-border-radius: 6px;
+    -fx-background-radius: 6px;
+    -fx-padding: 8px 12px;
+}
+
+.form-field:focused {
+    -fx-border-color: #3b82f6; /* Blue border on focus */
+    -fx-effect: dropshadow(three-pass-box, rgba(59, 130, 246, 0.3), 5, 0, 0, 0);
+}
+
+.button-primary {
+    -fx-background-color: #3b82f6; /* Blue */
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+    -fx-background-radius: 6px;
+    -fx-padding: 8px 16px;
+    -fx-cursor: hand;
+}
+.button-primary:hover { -fx-background-color: #2563eb; }
+
+.button-danger {
+    -fx-background-color: #ef4444; /* Red */
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+    -fx-background-radius: 6px;
+    -fx-padding: 8px 16px;
+    -fx-cursor: hand;
+}
+.button-danger:hover { -fx-background-color: #dc2626; }
+
+.button-secondary {
+    -fx-background-color: #64748b; /* Gray */
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+    -fx-background-radius: 6px;
+    -fx-padding: 8px 16px;
+    -fx-cursor: hand;
+}
+.button-secondary:hover { -fx-background-color: #475569; }

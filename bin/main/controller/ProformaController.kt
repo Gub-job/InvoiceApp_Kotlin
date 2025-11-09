@@ -10,10 +10,10 @@ import javafx.stage.Popup
 import javafx.stage.Stage
 import javafx.util.Callback
 import model.PelangganData
+import model.DocumentData
 import model.ProdukData
 import utils.DatabaseHelper
 import utils.NomorGenerator
-import utils.PdfGenerator
 import utils.CreateProformaTables
 import java.sql.*
 import java.time.LocalDate
@@ -635,7 +635,7 @@ class ProformaController {
 
         if (file != null) {
             try {
-                val data = PdfGenerator.DocumentData(
+                val data = DocumentData(
                     documentType = "PROFORMA INVOICE",
                     nomorDokumen = nomorField.text,
                     tanggalDokumen = tanggalPicker.value.toString(),
@@ -650,7 +650,10 @@ class ProformaController {
                     contractRef = contractRefField.text,
                     contractDate = contractDatePicker.value?.toString()
                 )
-                PdfGenerator.generatePdf(data, file)
+                // Ganti ke TemplatePdfGenerator
+                file.outputStream().use { stream ->
+                    utils.TemplatePdfGenerator.generatePdf(data, stream)
+                }
                 showAlert("Sukses", "File PDF berhasil disimpan di:\n${file.absolutePath}")
             } catch (e: Exception) {
                 showAlert("Error", "Gagal membuat file PDF: ${e.message}")

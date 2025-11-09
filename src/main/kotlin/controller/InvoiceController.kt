@@ -4,7 +4,11 @@ import javafx.beans.property.SimpleStringProperty
 import javafx.collections.FXCollections
 import javafx.fxml.FXML
 import javafx.geometry.Bounds
+import javafx.geometry.Insets
+import javafx.geometry.Pos
+import javafx.scene.Scene
 import javafx.scene.control.*
+import javafx.scene.image.ImageView
 import javafx.scene.control.cell.TextFieldTableCell
 import javafx.stage.Popup
 import javafx.stage.Stage
@@ -12,8 +16,9 @@ import javafx.util.Callback
 import model.PelangganData
 import model.ProdukData
 import utils.DatabaseHelper
-import utils.PdfGenerator
+
 import utils.NomorGenerator
+import utils.PrintPreview
 import utils.CreateProformaTables
 import java.sql.Connection
 import java.sql.Statement
@@ -708,35 +713,33 @@ class InvoiceController {
     }
 
     private fun cetakInvoiceKePdf() {
-        val fileChooser = javafx.stage.FileChooser().apply {
-            title = "Simpan Invoice sebagai PDF"
-            initialFileName = "${nomorField.text.replace("/", "_")}.pdf"
-            extensionFilters.add(javafx.stage.FileChooser.ExtensionFilter("PDF Files", "*.pdf"))
+        if (idInvoiceBaru == 0 && !isEditMode) {
+            showAlert("Peringatan", "Silakan simpan invoice terlebih dahulu sebelum mencetak.")
+            return
         }
-        val file = fileChooser.showSaveDialog(cetakBtn.scene.window)
 
-        if (file != null) {
-            try {
-                val data = PdfGenerator.DocumentData(
-                    documentType = "INVOICE",
-                    nomorDokumen = nomorField.text,
-                    tanggalDokumen = tanggalPicker.value.toString(),
-                    namaPelanggan = pelangganField.text,
-                    alamatPelanggan = alamatField.text,
-                    teleponPelanggan = teleponField.text,
-                    items = detailList.toList(),
-                    subtotal = subtotalLabel.text,
-                    dp = dpAmountLabel.text,
-                    ppn = ppnAmountLabel.text,
-                    grandTotal = grandTotalLabel.text,
-                    contractRef = contractRefField.text,
-                    contractDate = contractDatePicker.value?.toString()
-                )
-                PdfGenerator.generatePdf(data, file)
-                showAlert("Sukses", "File PDF berhasil disimpan di:\n${file.absolutePath}")
-            } catch (e: Exception) {
-                showAlert("Error", "Gagal membuat file PDF: ${e.message}")
-            }
+        try {
+            val data = model.DocumentData(
+                documentType = "INVOICE",
+                nomorDokumen = nomorField.text,
+                tanggalDokumen = tanggalPicker.value.toString(),
+                namaPelanggan = pelangganField.text,
+                alamatPelanggan = alamatField.text,
+                teleponPelanggan = teleponField.text,
+                items = detailList.toList(),
+                subtotal = subtotalLabel.text,
+                dp = dpAmountLabel.text,
+                ppn = ppnAmountLabel.text,
+                grandTotal = grandTotalLabel.text,
+                contractRef = contractRefField.text,
+                contractDate = contractDatePicker.value?.toString()
+            )
+
+            val preview = PrintPreview(data, cetakBtn.scene.window)
+            preview.show()
+
+        } catch (e: Exception) {
+            showAlert("Error", "Gagal membuat pratinjau cetak: ${e.message}")
         }
     }
 

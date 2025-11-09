@@ -11,9 +11,10 @@ import javafx.stage.Stage
 import javafx.util.Callback
 import model.PelangganData
 import model.ProdukData
+
+import utils.PrintPreview
 import utils.DatabaseHelper
 import utils.NomorGenerator
-import utils.PdfGenerator
 import utils.CreateProformaTables
 import java.sql.*
 import java.time.LocalDate
@@ -39,6 +40,7 @@ class ProformaController {
     @FXML private lateinit var konversiBtn: Button
     @FXML private lateinit var hapusBtn: Button
     @FXML private lateinit var tambahBtn: Button
+    @FXML private lateinit var cetakBtn: Button
     // Tambahkan @FXML untuk komponen PPN dari FXML
     @FXML private lateinit var ppnField: Label
     @FXML private lateinit var subtotalLabel: Label
@@ -342,7 +344,7 @@ class ProformaController {
             simpanProformaDanDetail()
         }
 
-        konversiBtn.setOnAction {
+        cetakBtn.setOnAction {
             cetakProformaKePdf()
         }
 
@@ -626,35 +628,33 @@ class ProformaController {
     }
 
     private fun cetakProformaKePdf() {
-        val fileChooser = javafx.stage.FileChooser().apply {
-            title = "Simpan Proforma sebagai PDF"
-            initialFileName = "${nomorField.text.replace("/", "_")}.pdf"
-            extensionFilters.add(javafx.stage.FileChooser.ExtensionFilter("PDF Files", "*.pdf"))
+        if (idProformaBaru == 0) {
+            showAlert("Peringatan", "Silakan simpan proforma terlebih dahulu sebelum mencetak.")
+            return
         }
-        val file = fileChooser.showSaveDialog(konversiBtn.scene.window)
 
-        if (file != null) {
-            try {
-                val data = PdfGenerator.DocumentData(
-                    documentType = "PROFORMA INVOICE",
-                    nomorDokumen = nomorField.text,
-                    tanggalDokumen = tanggalPicker.value.toString(),
-                    namaPelanggan = pelangganField.text,
-                    alamatPelanggan = alamatField.text,
-                    teleponPelanggan = teleponField.text,
-                    items = detailList.toList(),
-                    subtotal = subtotalLabel.text,
-                    dp = dpAmountLabel.text,
-                    ppn = ppnAmountLabel.text,
-                    grandTotal = grandTotalLabel.text,
-                    contractRef = contractRefField.text,
-                    contractDate = contractDatePicker.value?.toString()
-                )
-                PdfGenerator.generatePdf(data, file)
-                showAlert("Sukses", "File PDF berhasil disimpan di:\n${file.absolutePath}")
-            } catch (e: Exception) {
-                showAlert("Error", "Gagal membuat file PDF: ${e.message}")
-            }
+        try {
+            val data = model.DocumentData(
+                documentType = "PROFORMA INVOICE",
+                nomorDokumen = nomorField.text,
+                tanggalDokumen = tanggalPicker.value.toString(),
+                namaPelanggan = pelangganField.text,
+                alamatPelanggan = alamatField.text,
+                teleponPelanggan = teleponField.text,
+                items = detailList.toList(),
+                subtotal = subtotalLabel.text,
+                dp = dpAmountLabel.text,
+                ppn = ppnAmountLabel.text,
+                grandTotal = grandTotalLabel.text,
+                contractRef = contractRefField.text,
+                contractDate = contractDatePicker.value?.toString()
+            )
+
+            val preview = PrintPreview(data, cetakBtn.scene.window)
+            preview.show()
+
+        } catch (e: Exception) {
+            showAlert("Error", "Gagal membuat pratinjau cetak: ${e.message}")
         }
     }
 
@@ -697,11 +697,8 @@ class ProformaController {
             listView.selectionModel.selectFirst()
             
             if (filtered.isNotEmpty()) {
-                // Hanya tampilkan popup jika field sudah terlihat di layar
-                if (pelangganField.scene?.window?.isShowing == true) {
-                    val screenBounds: Bounds = pelangganField.localToScreen(pelangganField.boundsInLocal)
-                    popup.show(pelangganField, screenBounds.minX, screenBounds.minY + screenBounds.height)
-                }
+                val screenBounds: Bounds = pelangganField.localToScreen(pelangganField.boundsInLocal)
+                popup.show(pelangganField, screenBounds.minX, screenBounds.minY + screenBounds.height)
             } else {
                 popup.hide()
             }
