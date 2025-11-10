@@ -28,6 +28,7 @@ class MainController {
 
     companion object {
         var idPerusahaanAktif: Int = 0
+        var namaAdmin: String = "Admin" // Default nama admin
     }
 
     @FXML
@@ -229,7 +230,7 @@ class MainController {
             val loader = FXMLLoader(javaClass.getResource("/view/LaporanPenjualanView.fxml"))
             val content = loader.load<VBox>()
             val controller = loader.getController<LaporanPenjualanController>()
-            controller.setPerusahaanId(idPerusahaanAktif)
+            controller.setPerusahaanId(idPerusahaanAktif, namaAdmin)
             mainPane.center = content
         } catch (e: Exception) {
             e.printStackTrace()

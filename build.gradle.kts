@@ -21,6 +21,10 @@ dependencies {
     // Dependensi untuk Print Preview (PDFBox)
     implementation("org.apache.pdfbox:pdfbox:2.0.30")
     implementation("org.openjfx:javafx-swing:17.0.10") // Sesuaikan versi dengan javafx Anda
+
+    // Dependensi untuk ekspor ke Excel (Apache POI)
+    implementation("org.apache.poi:poi:5.2.5")
+    implementation("org.apache.poi:poi-ooxml:5.2.5")
 }
 
 javafx {
@@ -30,9 +34,4 @@ javafx {
 
 application {
     mainClass.set("main.MainKt")
-
-    applicationDefaultJvmArgs = listOf(
-        "--module-path", """D:\DOWN_APK\javafx-sdk-17.0.16\lib""",
-        "--add-modules", "javafx.controls,javafx.fxml,javafx.swing"
-    )
 }

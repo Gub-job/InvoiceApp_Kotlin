@@ -156,6 +156,7 @@ class PerusahaanController {
         val txtLokasiBank = TextField()
         val txtNamaPemilik = TextField()
         val txtJabatanPemilik = TextField()
+        val txtNamaAdmin = TextField() // Field baru untuk Nama Admin
         val lblLogo = Label("Belum ada logo dipilih")
         var selectedLogoFile: File? = null
 
@@ -197,8 +198,10 @@ class PerusahaanController {
             add(txtNamaPemilik, 1, 8)
             add(Label("Jabatan Pemilik:"), 0, 9)
             add(txtJabatanPemilik, 1, 9)
-            add(Label("Logo:"), 0, 10)
-            add(VBox(5.0, btnPilihLogo, lblLogo), 1, 10)
+            add(Label("Nama Admin:"), 0, 10) // Label untuk field baru
+            add(txtNamaAdmin, 1, 10)      // Field baru
+            add(Label("Logo:"), 0, 11)
+            add(VBox(5.0, btnPilihLogo, lblLogo), 1, 11)
         }
 
         val btnSimpan = Button("Simpan").apply {
@@ -220,9 +223,9 @@ class PerusahaanController {
 
                 DatabaseHelper.getConnection().use { conn ->
                     val sql = """
-                        INSERT INTO perusahaan 
-                        (nama, alamat, telepon, fax, HP, no_rek, nama_bank, lokasi_kantor_bank, nama_pemilik, jabatan_pemilik, logo_path) 
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        INSERT INTO perusahaan
+                        (nama, alamat, telepon, fax, HP, no_rek, nama_bank, lokasi_kantor_bank, nama_pemilik, jabatan_pemilik, logo_path, nama_admin)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """.trimIndent()
                     conn.prepareStatement(sql).use { stmt ->
                         stmt.setString(1, txtNama.text)
@@ -236,6 +239,7 @@ class PerusahaanController {
                         stmt.setString(9, txtNamaPemilik.text)
                         stmt.setString(10, txtJabatanPemilik.text)
                         stmt.setString(11, logoPath)
+                        stmt.setString(12, txtNamaAdmin.text) // Simpan nama admin
                         stmt.executeUpdate()
                     }
                 }
@@ -250,7 +254,7 @@ class PerusahaanController {
             alignment = javafx.geometry.Pos.CENTER
         }
 
-        dialog.scene = Scene(root, 600.0, 650.0)
+        dialog.scene = Scene(root, 600.0, 700.0) // Perbesar sedikit tinggi dialog
         dialog.showAndWait()
     }
 

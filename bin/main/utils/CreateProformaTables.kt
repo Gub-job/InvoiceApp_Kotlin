@@ -73,6 +73,9 @@ object CreateProformaTables {
             // Panggil fungsi untuk memastikan kolom-kolom baru ada di tabel invoice
             addMissingInvoiceColumns(conn)
             
+            // Tambahkan kolom nama_admin ke tabel perusahaan
+            addAdminNameToPerusahaan(conn)
+            
             println("Tabel proforma, detail_proforma, invoice, dan detail_invoice berhasil dibuat/diupdate")
             conn.close()
             
@@ -160,5 +163,9 @@ object CreateProformaTables {
         rs.close()
         checkStmt.close()
         return count > 0
+    }
+
+    private fun addAdminNameToPerusahaan(conn: java.sql.Connection) {
+        addColumnIfNotExists(conn, "perusahaan", "nama_admin", "TEXT")
     }
 }

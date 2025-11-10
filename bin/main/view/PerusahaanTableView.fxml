@@ -1,59 +1,99 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
+<?import javafx.geometry.Insets?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.image.ImageView?>
-<?import javafx.geometry.Insets?>
 <?import javafx.scene.layout.*?>
+<?import javafx.scene.text.Font?>
 
-<VBox xmlns:fx="http://javafx.com/fxml"
-      fx:controller="controller.PerusahaanTabelController"
-      spacing="15.0">
-    <padding>
-        <Insets top="15" right="15" bottom="15" left="15"/>
-    </padding>
+<ScrollPane fitToWidth="true" hbarPolicy="NEVER"
+    stylesheets="@style.css" xmlns="http://javafx.com/javafx/17.0.16"
+    fx:controller="controller.PerusahaanTabelController"
+    xmlns:fx="http://javafx.com/fxml/1">
+    <content>
+        <VBox alignment="TOP_CENTER" spacing="20.0">
+            <padding>
+                <Insets bottom="30.0" left="50.0" right="50.0" top="30.0" />
+            </padding>
+            <children>
+                <Label styleClass="form-title" text="Detail Perusahaan">
+                    <font>
+                        <Font name="System Bold" size="24.0" />
+                    </font>
+                </Label>
 
-    <GridPane hgap="10" vgap="10">
-        <padding>
-            <Insets top="10" right="10" bottom="10" left="10"/>
-        </padding>
+                <GridPane hgap="15.0" styleClass="form-grid" vgap="15.0">
+                    <columnConstraints>
+                        <ColumnConstraints hgrow="SOMETIMES" maxWidth="200.0" minWidth="150.0" />
+                        <ColumnConstraints hgrow="SOMETIMES" />
+                    </columnConstraints>
 
-        <Label text="Nama" GridPane.rowIndex="0" GridPane.columnIndex="0"/>
-        <TextField fx:id="namaField" GridPane.rowIndex="0" GridPane.columnIndex="1"/>
+                    <Label text="Nama Perusahaan" GridPane.halignment="RIGHT" />
+                    <TextField fx:id="namaField" styleClass="form-field" GridPane.columnIndex="1" />
 
-        <Label text="Alamat" GridPane.rowIndex="1" GridPane.columnIndex="0"/>
-        <TextArea fx:id="alamatField" prefRowCount="3" GridPane.rowIndex="1" GridPane.columnIndex="1"/>
+                    <Label text="Alamat" GridPane.halignment="RIGHT" GridPane.rowIndex="1" />
+                    <TextArea fx:id="alamatField" prefRowCount="3" styleClass="form-field"
+                        GridPane.columnIndex="1" GridPane.rowIndex="1" />
 
-        <Label text="Telepon" GridPane.rowIndex="2" GridPane.columnIndex="0"/>
-        <TextField fx:id="teleponField" GridPane.rowIndex="2" GridPane.columnIndex="1"/>
+                    <Label text="Telepon" GridPane.halignment="RIGHT" GridPane.rowIndex="2" />
+                    <TextField fx:id="teleponField" styleClass="form-field" GridPane.columnIndex="1"
+                        GridPane.rowIndex="2" />
 
-        <Label text="Fax" GridPane.rowIndex="3" GridPane.columnIndex="0"/>
-        <TextField fx:id="faxField" GridPane.rowIndex="3" GridPane.columnIndex="1"/>
+                    <Label text="Fax" GridPane.halignment="RIGHT" GridPane.rowIndex="3" />
+                    <TextField fx:id="faxField" styleClass="form-field" GridPane.columnIndex="1"
+                        GridPane.rowIndex="3" />
 
-        <Label text="HP" GridPane.rowIndex="4" GridPane.columnIndex="0"/>
-        <TextField fx:id="hpField" GridPane.rowIndex="4" GridPane.columnIndex="1"/>
+                    <Label text="HP" GridPane.halignment="RIGHT" GridPane.rowIndex="4" />
+                    <TextField fx:id="hpField" styleClass="form-field" GridPane.columnIndex="1"
+                        GridPane.rowIndex="4" />
 
-        <Label text="No. Rekening" GridPane.rowIndex="5" GridPane.columnIndex="0"/>
-        <TextField fx:id="noRekField" GridPane.rowIndex="5" GridPane.columnIndex="1"/>
+                    <Label text="No. Rekening" GridPane.halignment="RIGHT" GridPane.rowIndex="5" />
+                    <TextField fx:id="noRekField" styleClass="form-field" GridPane.columnIndex="1"
+                        GridPane.rowIndex="5" />
 
-        <Label text="Nama Bank" GridPane.rowIndex="6" GridPane.columnIndex="0"/>
-        <TextField fx:id="namaBankField" GridPane.rowIndex="6" GridPane.columnIndex="1"/>
+                    <Label text="Nama Bank" GridPane.halignment="RIGHT" GridPane.rowIndex="6" />
+                    <TextField fx:id="namaBankField" styleClass="form-field"
+                        GridPane.columnIndex="1"
+                        GridPane.rowIndex="6" />
 
-        <Label text="Lokasi Kantor Bank" GridPane.rowIndex="7" GridPane.columnIndex="0"/>
-        <TextField fx:id="lokasiBankField" GridPane.rowIndex="7" GridPane.columnIndex="1"/>
+                    <Label text="Lokasi Bank" GridPane.halignment="RIGHT" GridPane.rowIndex="7" />
+                    <TextField fx:id="lokasiBankField" styleClass="form-field"
+                        GridPane.columnIndex="1"
+                        GridPane.rowIndex="7" />
 
-        <Label text="Nama Pemilik" GridPane.rowIndex="8" GridPane.columnIndex="0"/>
-        <TextField fx:id="namaPemilikField" GridPane.rowIndex="8" GridPane.columnIndex="1"/>
+                    <Label text="Nama Pemilik" GridPane.halignment="RIGHT" GridPane.rowIndex="8" />
+                    <TextField fx:id="namaPemilikField" styleClass="form-field"
+                        GridPane.columnIndex="1"
+                        GridPane.rowIndex="8" />
 
-        <Label text="Jabatan Pemilik" GridPane.rowIndex="9" GridPane.columnIndex="0"/>
-        <TextField fx:id="jabatanPemilikField" GridPane.rowIndex="9" GridPane.columnIndex="1"/>
+                    <Label text="Jabatan Pemilik" GridPane.halignment="RIGHT" GridPane.rowIndex="9" />
+                    <TextField fx:id="jabatanPemilikField" styleClass="form-field"
+                        GridPane.columnIndex="1" GridPane.rowIndex="9" />
 
-        <Button fx:id="gantiLogoBtn" text="Ganti Logo" GridPane.rowIndex="10" GridPane.columnIndex="1"/>
-        <ImageView fx:id="logoView" fitHeight="100" preserveRatio="true"
-                   GridPane.rowIndex="11" GridPane.columnIndex="1"/>
-    </GridPane>
+                    <Label text="Nama Admin" GridPane.halignment="RIGHT" GridPane.rowIndex="10" />
+                    <TextField fx:id="adminField" styleClass="form-field" GridPane.columnIndex="1"
+                        GridPane.rowIndex="10" />
 
-    <HBox spacing="10">
-        <Button fx:id="simpanBtn" text="Simpan Perubahan" onAction="#simpanData"/>
-        <Button fx:id="hapusBtn" text="Hapus Perusahaan" onAction="#hapusData"/>
-    </HBox>
-</VBox>
+                    <Label text="Logo Perusahaan" GridPane.halignment="RIGHT" GridPane.rowIndex="11" />
+                    <VBox spacing="10.0" GridPane.columnIndex="1" GridPane.rowIndex="11">
+                        <ImageView fx:id="logoView" fitHeight="100.0" fitWidth="150.0"
+                            preserveRatio="true" />
+                        <Button fx:id="gantiLogoBtn" onAction="#setupGantiLogoButton"
+                            styleClass="button-secondary" text="Ganti Logo" />
+                    </VBox>
+                </GridPane>
+                <HBox alignment="CENTER_RIGHT" spacing="10.0">
+                    <children>
+                        <Button fx:id="hapusBtn" onAction="#hapusData" styleClass="button-danger"
+                            text="Hapus Perusahaan" />
+                        <Button fx:id="simpanBtn" onAction="#simpanData" styleClass="button-primary"
+                            text="Simpan Perubahan" />
+                    </children>
+                    <VBox.margin>
+                        <Insets top="20.0" />
+                    </VBox.margin>
+                </HBox>
+            </children>
+        </VBox>
+    </content>
+</ScrollPane>
