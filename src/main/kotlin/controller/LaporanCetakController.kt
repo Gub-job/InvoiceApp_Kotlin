@@ -36,6 +36,9 @@ class LaporanCetakController {
     @FXML private lateinit var kolomQty: TableColumn<LaporanData, String>
     @FXML private lateinit var kolomHarga: TableColumn<LaporanData, String>
     @FXML private lateinit var kolomTotal: TableColumn<LaporanData, String>
+    @FXML private lateinit var kolomPpn: TableColumn<LaporanData, String>
+    @FXML private lateinit var kolomTotalPpn: TableColumn<LaporanData, String>
+
     
     private val laporanList = FXCollections.observableArrayList<LaporanData>()
     private var idPerusahaan: Int = 0
@@ -51,6 +54,8 @@ class LaporanCetakController {
         kolomQty.setCellValueFactory { it.value.qtyProperty }
         kolomHarga.setCellValueFactory { it.value.hargaProperty }
         kolomTotal.setCellValueFactory { it.value.totalProperty }
+        kolomPpn.setCellValueFactory { it.value.ppnProperty }
+        kolomTotalPpn.setCellValueFactory { it.value.totalDenganPpnProperty }
         tableView.items = laporanList
     }
     
@@ -71,10 +76,13 @@ class LaporanCetakController {
         labelTanggalCetak.text = ": ${LocalDate.now().format(DateTimeFormatter.ofPattern("dd MMMM yyyy", Locale("id", "ID")))}"
         
         // Hitung total
-        val total = data.sumOf { 
-            it.totalProperty.get().replace(",", "").replace(".", "").toDoubleOrNull() ?: 0.0 
+        val total = data.sumOf {
+            it.totalProperty.get().replace(".", "").replace(",", ".").toDoubleOrNull() ?: 0.0
         }
-        labelTotalKeseluruhan.text = "Total Keseluruhan: Rp ${String.format("%,.2f", total)}"
+        val totalPpn = data.sumOf {
+            it.ppnProperty.get().replace(".", "").replace(",", ".").toDoubleOrNull() ?: 0.0
+        }
+        labelTotalKeseluruhan.text = "Total: Rp ${String.format("%,.2f", total)} | Total PPN: Rp ${String.format("%,.2f", totalPpn)}"
     }
     
     private fun loadInfoPerusahaan() {
@@ -208,7 +216,7 @@ class LaporanCetakController {
 
                 // Table headers
                 val headerRow = sheet.createRow(currentRow++)
-                val headers = listOf("Tanggal", "Nomor", "Pelanggan", "Produk", "Qty", "Harga", "Total")
+                val headers = listOf("Tanggal", "Nomor", "Pelanggan", "Produk", "Qty", "Harga", "Total", "PPN", "Total+PPN")
                 headers.forEachIndexed { index, headerText ->
                     headerRow.createCell(index).apply {
                         setCellValue(headerText)
@@ -226,20 +234,31 @@ class LaporanCetakController {
                     row.createCell(4).apply { setCellValue(data.qtyProperty.get()); cellStyle = dataStyle }
                     row.createCell(5).apply { setCellValue(data.hargaProperty.get()); cellStyle = dataStyle }
                     row.createCell(6).apply { setCellValue(data.totalProperty.get()); cellStyle = dataStyle }
+                    row.createCell(7).apply { setCellValue(data.ppnProperty.get()); cellStyle = dataStyle }
+                    row.createCell(8).apply { setCellValue(data.totalDenganPpnProperty.get()); cellStyle = dataStyle }
                 }
                 
                 // Total
                 currentRow += laporanList.size
+                val totalSub = laporanList.sumOf { it.totalProperty.get().replace(".", "").replace(",", ".").toDoubleOrNull() ?: 0.0 }
+                val totalPpn = laporanList.sumOf { it.ppnProperty.get().replace(".", "").replace(",", ".").toDoubleOrNull() ?: 0.0 }
+                val grandTotal = laporanList.sumOf { it.totalDenganPpnProperty.get().replace(".", "").replace(",", ".").toDoubleOrNull() ?: 0.0 }
+
                 sheet.createRow(currentRow++).apply {
-                    createCell(5).apply { setCellValue("TOTAL:"); cellStyle = boldStyle }
-                    createCell(6).apply { 
-                        setCellValue(labelTotalKeseluruhan.text.replace("Total Keseluruhan: ", ""))
-                        cellStyle = boldStyle
-                    }
+                    createCell(5).apply { setCellValue("SUBTOTAL:"); cellStyle = boldStyle }
+                    createCell(6).apply { setCellValue(String.format(Locale.GERMAN, "%,.2f", totalSub)); cellStyle = boldStyle }
+                }
+                sheet.createRow(currentRow++).apply {
+                    createCell(5).apply { setCellValue("TOTAL PPN:"); cellStyle = boldStyle }
+                    createCell(7).apply { setCellValue(String.format(Locale.GERMAN, "%,.2f", totalPpn)); cellStyle = boldStyle }
+                }
+                sheet.createRow(currentRow++).apply {
+                    createCell(5).apply { setCellValue("GRAND TOTAL:"); cellStyle = boldStyle }
+                    createCell(8).apply { setCellValue(String.format(Locale.GERMAN, "%,.2f", grandTotal)); cellStyle = boldStyle }
                 }
                 
                 // Auto-size columns
-                for (i in 0..6) {
+                for (i in 0..8) {
                     sheet.autoSizeColumn(i)
                 }
                 

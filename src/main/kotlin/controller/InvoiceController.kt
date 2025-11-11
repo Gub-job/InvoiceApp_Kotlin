@@ -54,7 +54,7 @@ class InvoiceController {
     @FXML private lateinit var cetakBtn: Button
     @FXML private lateinit var hapusBtn: Button
     @FXML private lateinit var tambahBtn: Button
-    @FXML private lateinit var ppnField: Label
+    @FXML private lateinit var ppnCheckBox: CheckBox
     @FXML private lateinit var subtotalLabel: Label 
     @FXML private lateinit var ppnAmountLabel: Label
     @FXML private lateinit var dpAmountLabel: Label
@@ -203,8 +203,71 @@ class InvoiceController {
         kolomHarga.setCellValueFactory { it.value.hargaProperty }
         kolomTotal.setCellValueFactory { it.value.totalProperty }
 
-        kolomQty.cellFactory = TextFieldTableCell.forTableColumn()
-        kolomHarga.cellFactory = TextFieldTableCell.forTableColumn()
+        // Custom cell factory untuk Qty dengan Tab support
+        kolomQty.cellFactory = Callback {
+            object : TextFieldTableCell<ProdukData, String>() {
+                override fun startEdit() {
+                    super.startEdit()
+                    val tf = graphic as? TextField
+                    tf?.setOnKeyPressed { event ->
+                        val selectedRow = table.selectionModel.selectedIndex
+                        when (event.code) {
+                            javafx.scene.input.KeyCode.TAB, javafx.scene.input.KeyCode.ENTER, javafx.scene.input.KeyCode.RIGHT -> {
+                                commitEdit(tf.text)
+                                event.consume()
+                                javafx.application.Platform.runLater {
+                                    table.edit(selectedRow, kolomHarga)
+                                }
+                            }
+                            javafx.scene.input.KeyCode.LEFT -> {
+                                commitEdit(tf.text)
+                                event.consume()
+                                javafx.application.Platform.runLater {
+                                    table.edit(selectedRow, kolomNama)
+                                }
+                            }
+                            else -> {}
+                        }
+                    }
+                    javafx.application.Platform.runLater { tf?.requestFocus() }
+                }
+            }
+        }
+        
+        // Custom cell factory untuk Harga dengan Tab support
+        kolomHarga.cellFactory = Callback {
+            object : TextFieldTableCell<ProdukData, String>() {
+                override fun startEdit() {
+                    super.startEdit()
+                    val tf = graphic as? TextField
+                    tf?.setOnKeyPressed { event ->
+                        val selectedRow = table.selectionModel.selectedIndex
+                        when (event.code) {
+                            javafx.scene.input.KeyCode.TAB, javafx.scene.input.KeyCode.ENTER, javafx.scene.input.KeyCode.RIGHT -> {
+                                commitEdit(tf.text)
+                                event.consume()
+                                // Pindah ke baris berikutnya
+                                if (selectedRow < detailList.size - 1) {
+                                    javafx.application.Platform.runLater {
+                                        table.selectionModel.select(selectedRow + 1)
+                                        table.edit(selectedRow + 1, kolomNama)
+                                    }
+                                }
+                            }
+                            javafx.scene.input.KeyCode.LEFT -> {
+                                commitEdit(tf.text)
+                                event.consume()
+                                javafx.application.Platform.runLater {
+                                    table.edit(selectedRow, kolomQty)
+                                }
+                            }
+                            else -> {}
+                        }
+                    }
+                    javafx.application.Platform.runLater { tf?.requestFocus() }
+                }
+            }
+        }
 
         kolomNama.cellFactory = Callback {
             object : TextFieldTableCell<ProdukData, String>() {
@@ -336,6 +399,11 @@ class InvoiceController {
         // Listener untuk tanggal - update nomor jika sudah ada produk
         tanggalPicker.valueProperty().addListener { _, _, newDate ->
             updateNomorIfReady()
+        }
+        
+        // Listener untuk PPN checkbox
+        ppnCheckBox.selectedProperty().addListener { _, _, _ ->
+            updateTotals()
         }
     }
 
@@ -573,7 +641,7 @@ class InvoiceController {
         try {
             // 2. Hitung semua nilai yang akan disimpan
             val subtotal = detailList.sumOf { it.totalProperty.get().replace(",", ".").toDoubleOrNull() ?: 0.0 }
-            val ppnRate = ppnField.text.toDoubleOrNull() ?: 0.0 // ppnField adalah Label
+            val ppnRate = if (ppnCheckBox.isSelected) 11.0 else 0.0
             val dpPercentage = dpField.text.toDoubleOrNull() ?: 0.0
             val dpAmount = subtotal * (dpPercentage / 100.0)
 
@@ -654,7 +722,7 @@ class InvoiceController {
         try {
             // 1. Hitung semua nilai
             val subtotal = detailList.sumOf { it.totalProperty.get().replace(",", ".").toDoubleOrNull() ?: 0.0 }
-            val ppnRate = ppnField.text.toDoubleOrNull() ?: 0.0
+            val ppnRate = if (ppnCheckBox.isSelected) 11.0 else 0.0
             val dpPercentage = dpField.text.toDoubleOrNull() ?: 0.0
             val dpAmount = subtotal * (dpPercentage / 100.0)
             val ppnAmount = if (dpAmount > 0) dpAmount * (ppnRate / 100.0) else subtotal * (ppnRate / 100.0)
@@ -852,7 +920,7 @@ class InvoiceController {
     private fun updateTotals() {
         // 1. Hitung nilai dasar
         val subtotal = detailList.sumOf { it.totalProperty.get().replace(",", "").toDoubleOrNull() ?: 0.0 }
-        val ppnRate = ppnField.text.toDoubleOrNull() ?: 0.0
+        val ppnRate = if (ppnCheckBox.isSelected) 11.0 else 0.0
         val dpAmountValue = calculateDPValue()
 
         // 2. Hitung PPN Amount sesuai aturan: dari DP jika ada, jika tidak dari Subtotal
@@ -946,7 +1014,7 @@ class InvoiceController {
             stmt.setInt(1, idPerusahaan)
             val rs = stmt.executeQuery()
             if (rs.next()) {
-                ppnField.text = rs.getDouble("default_tax_rate").toString()
+                ppnCheckBox.isSelected = rs.getDouble("default_tax_rate") > 0
             }
         } catch (e: Exception) {
             println("Gagal memuat default tax rate: ${e.message}")

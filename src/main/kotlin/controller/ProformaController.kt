@@ -42,7 +42,7 @@ class ProformaController {
     @FXML private lateinit var tambahBtn: Button
     @FXML private lateinit var cetakBtn: Button
     // Tambahkan @FXML untuk komponen PPN dari FXML
-    @FXML private lateinit var ppnField: Label
+    @FXML private lateinit var ppnCheckBox: CheckBox
     @FXML private lateinit var subtotalLabel: Label
     @FXML private lateinit var dpAmountLabel: Label
     @FXML private lateinit var ppnAmountLabel: Label
@@ -102,7 +102,7 @@ class ProformaController {
                 val taxAmount = rs.getDouble("tax")
                 if (subtotal > 0) {
                     val ppnPercentage = (taxAmount / subtotal) * 100
-                    ppnField.text = String.format("%.2f", ppnPercentage).replace(",", ".")
+                    ppnCheckBox.isSelected = ppnPercentage > 0
                 }
                 
                 // Load pelanggan
@@ -374,6 +374,11 @@ class ProformaController {
         }
         
         updateDPDisplay() // Panggil saat inisialisasi
+        
+        // Listener untuk PPN checkbox
+        ppnCheckBox.selectedProperty().addListener { _, _, _ ->
+            updateTotals()
+        }
     }
 
     // ===========================================================
@@ -508,7 +513,7 @@ class ProformaController {
         conn.autoCommit = false
         try {
             val subtotal = detailList.sumOf { it.totalProperty.get().replace(",", ".").toDoubleOrNull() ?: 0.0 }
-            val ppnRate = ppnField.text.toDoubleOrNull() ?: 0.0
+            val ppnRate = if (ppnCheckBox.isSelected) 11.0 else 0.0
             val ppnAmount = subtotal * (ppnRate / 100.0)
             val totalDenganPpn = subtotal + ppnAmount
 
@@ -552,7 +557,7 @@ class ProformaController {
         conn.autoCommit = false
         try {
             val subtotal = detailList.sumOf { it.totalProperty.get().replace(",", ".").toDoubleOrNull() ?: 0.0 }
-            val ppnRate = ppnField.text.toDoubleOrNull() ?: 0.0
+            val ppnRate = if (ppnCheckBox.isSelected) 11.0 else 0.0
             val ppnAmount = subtotal * (ppnRate / 100.0)
             val totalDenganPpn = subtotal + ppnAmount
 
@@ -767,7 +772,7 @@ class ProformaController {
     private fun updateTotals() {
         // 1. Hitung nilai dasar
         val subtotal = detailList.sumOf { it.totalProperty.get().replace(",", "").toDoubleOrNull() ?: 0.0 }
-        val ppnRate = ppnField.text.toDoubleOrNull() ?: 0.0
+        val ppnRate = if (ppnCheckBox.isSelected) 11.0 else 0.0
         val dpAmountValue = calculateDPValue()
 
         // 2. Hitung PPN Amount sesuai aturan: dari DP jika ada, jika tidak dari Subtotal
@@ -805,7 +810,7 @@ class ProformaController {
             stmt.setInt(1, idPerusahaan)
             val rs = stmt.executeQuery()
             if (rs.next()) {
-                ppnField.text = rs.getDouble("default_tax_rate").toString()
+                ppnCheckBox.isSelected = rs.getDouble("default_tax_rate") > 0
             }
         } catch (e: Exception) {
             println("Gagal memuat default tax rate: ${e.message}")

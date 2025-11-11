@@ -46,6 +46,8 @@
                 <TableColumn fx:id="kolomQty" prefWidth="80.0" text="Qty"/>
                 <TableColumn fx:id="kolomHarga" prefWidth="120.0" text="Harga"/>
                 <TableColumn fx:id="kolomTotal" prefWidth="120.0" text="Total"/>
+                <TableColumn fx:id="kolomPpn" prefWidth="100.0" text="PPN"/>
+                <TableColumn fx:id="kolomTotalPpn" prefWidth="120.0" text="Total+PPN"/>
             </columns>
         </TableView>
         
