@@ -5,6 +5,7 @@ import javafx.collections.FXCollections
 import javafx.fxml.FXML
 import javafx.geometry.Bounds
 import javafx.scene.control.*
+import javafx.scene.layout.Pane
 import javafx.scene.control.cell.TextFieldTableCell
 import javafx.stage.Popup
 import javafx.stage.Stage
@@ -56,6 +57,9 @@ class ProformaController {
     private val listView = ListView<PelangganData>()
     private val produkPopup = Popup()
     private val produkListView = ListView<ProdukData>()
+
+    // TextField terpusat untuk autocomplete produk yang lebih stabil
+    private val produkSearchField = TextField()
 
     private var selectedPelanggan: PelangganData? = null
     private var idPerusahaan: Int = 0
@@ -224,75 +228,45 @@ class ProformaController {
         // Custom cell factory untuk kolomNama dengan autocomplete smooth
         kolomNama.cellFactory = Callback {
             object : TextFieldTableCell<ProdukData, String>() {
-                private var textField: TextField? = null
-
                 override fun startEdit() {
                     super.startEdit()
-                    currentEditingCell = this
-                    
-                    textField = graphic as? TextField
-                    textField?.let { tf ->
-                        tf.textProperty().addListener { _, _, newValue ->
-                            filterAndShowProduk(newValue)
-                        }
-                        
-                        tf.setOnKeyPressed { event ->
-                            when (event.code) {
-                                javafx.scene.input.KeyCode.TAB, javafx.scene.input.KeyCode.RIGHT -> {
-                                    event.consume()
-                                    if (produkPopup.isShowing && produkListView.items.isNotEmpty()) {
-                                        val selected = produkListView.selectionModel.selectedItem 
-                                            ?: produkListView.items[0]
-                                        applyProdukAndMoveNext(selected)
-                                    } else {
-                                        commitEdit(tf.text)
-                                        moveToNextColumn()
-                                    }
+                    val tf = graphic as? TextField
+                    tf?.textProperty()?.addListener { _, _, newValue ->
+                        filterAndShowProdukForCell(newValue, tf)
+                    }
+                    tf?.setOnKeyPressed { event ->
+                        when (event.code) {
+                            javafx.scene.input.KeyCode.DOWN -> {
+                                if (produkPopup.isShowing) {
+                                    produkListView.requestFocus()
+                                    produkListView.selectionModel.selectFirst()
                                 }
-                                javafx.scene.input.KeyCode.ENTER -> {
-                                    if (produkPopup.isShowing && produkListView.items.isNotEmpty()) {
-                                        val selected = produkListView.selectionModel.selectedItem 
-                                            ?: produkListView.items[0]
-                                        applyProdukAndMoveNext(selected)
-                                    } else {
-                                        commitEdit(tf.text)
-                                        moveToNextColumn()
-                                    }
-                                    event.consume()
-                                }
-                                javafx.scene.input.KeyCode.DOWN -> {
-                                    if (produkPopup.isShowing) {
-                                        produkListView.requestFocus()
-                                        if (produkListView.selectionModel.isEmpty) {
-                                            produkListView.selectionModel.selectFirst()
-                                        }
-                                        event.consume()
-                                    }
-                                }
-                                javafx.scene.input.KeyCode.ESCAPE -> {
-                                    produkPopup.hide()
-                                    cancelEdit()
-                                    event.consume()
-                                }
-                                else -> {}
+                                event.consume()
                             }
+                            javafx.scene.input.KeyCode.ENTER, javafx.scene.input.KeyCode.TAB -> {
+                                if (produkPopup.isShowing && produkListView.selectionModel.selectedItem != null) {
+                                    val selected = produkListView.selectionModel.selectedItem
+                                    applyProdukToCell(selected, tf)
+                                    event.consume()
+                                }
+                            }
+                            javafx.scene.input.KeyCode.ESCAPE -> {
+                                produkPopup.hide()
+                                event.consume()
+                            }
+                            else -> {}
                         }
-                        
-                        // Auto focus
-                        javafx.application.Platform.runLater { tf.requestFocus() }
                     }
                 }
 
                 override fun cancelEdit() {
                     super.cancelEdit()
                     produkPopup.hide()
-                    currentEditingCell = null
                 }
 
                 override fun commitEdit(newValue: String?) {
                     super.commitEdit(newValue)
                     produkPopup.hide()
-                    currentEditingCell = null
                 }
             }
         }
@@ -379,6 +353,10 @@ class ProformaController {
         ppnCheckBox.selectedProperty().addListener { _, _, _ ->
             updateTotals()
         }
+
+
+
+
     }
 
     // ===========================================================
@@ -397,11 +375,21 @@ class ProformaController {
         produkListView.prefHeight = 200.0
         produkListView.prefWidth = 300.0
 
-        // Mouse click - langsung apply dan pindah
         produkListView.setOnMouseClicked {
             if (it.clickCount == 1 && produkListView.selectionModel.selectedItem != null) {
                 val selectedProduk = produkListView.selectionModel.selectedItem
-                applyProdukAndMoveNext(selectedProduk)
+                val selectedRow = table.selectionModel.selectedIndex
+                if (selectedRow >= 0 && selectedRow < detailList.size) {
+                    val row = detailList[selectedRow]
+                    row.idProperty.set(selectedProduk.idProperty.get())
+                    row.namaProperty.set(selectedProduk.namaProperty.get())
+                    row.uomProperty.set(selectedProduk.uomProperty.get())
+                    row.divisiProperty.set(selectedProduk.divisiProperty.get())
+                    row.singkatanProperty.set(selectedProduk.singkatanProperty.get())
+                }
+                produkPopup.hide()
+                updateNomorIfReady()
+                moveToNextColumn()
             }
         }
 
@@ -411,7 +399,18 @@ class ProformaController {
                 javafx.scene.input.KeyCode.ENTER, javafx.scene.input.KeyCode.TAB -> {
                     val selectedProduk = produkListView.selectionModel.selectedItem
                     if (selectedProduk != null) {
-                        applyProdukAndMoveNext(selectedProduk)
+                        val selectedRow = table.selectionModel.selectedIndex
+                        if (selectedRow >= 0 && selectedRow < detailList.size) {
+                            val row = detailList[selectedRow]
+                            row.idProperty.set(selectedProduk.idProperty.get())
+                            row.namaProperty.set(selectedProduk.namaProperty.get())
+                            row.uomProperty.set(selectedProduk.uomProperty.get())
+                            row.divisiProperty.set(selectedProduk.divisiProperty.get())
+                            row.singkatanProperty.set(selectedProduk.singkatanProperty.get())
+                        }
+                        produkPopup.hide()
+                        updateNomorIfReady()
+                        moveToNextColumn()
                     }
                     event.consume()
                 }
@@ -425,29 +424,26 @@ class ProformaController {
         }
     }
 
-    private fun filterAndShowProduk(keyword: String) {
+
+
+    private fun filterAndShowProdukForCell(keyword: String, textField: TextField) {
         if (keyword.isEmpty()) {
             produkPopup.hide()
             return
         }
 
         val filtered = produkList.filter {
-            it.namaProperty.get().contains(keyword, ignoreCase = true)
+            it.namaProperty.get().contains(keyword.trim(), ignoreCase = true)
         }
 
         if (filtered.isNotEmpty()) {
             produkListView.items.setAll(filtered)
             produkListView.selectionModel.selectFirst()
-            
+
             if (!produkPopup.isShowing) {
-                val cell = currentEditingCell
-                if (cell != null) {
-                    val screenBounds: Bounds = cell.localToScreen(cell.boundsInLocal)
-                    produkPopup.show(
-                        cell, 
-                        screenBounds.minX, 
-                        screenBounds.minY + screenBounds.height
-                    )
+                val bounds = textField.localToScreen(textField.boundsInLocal)
+                if (bounds != null) {
+                    produkPopup.show(textField, bounds.minX, bounds.minY + bounds.height)
                 }
             }
         } else {
@@ -455,22 +451,23 @@ class ProformaController {
         }
     }
 
-    private fun applyProdukAndMoveNext(produk: ProdukData?) {
-        if (produk != null && currentEditingCell != null) {
-            val row = currentEditingCell?.tableRow?.item
-            if (row != null) {
-                row.idProperty.set(produk.idProperty.get())
-                row.namaProperty.set(produk.namaProperty.get())
-                row.uomProperty.set(produk.uomProperty.get())
-                row.divisiProperty.set(produk.divisiProperty.get())
-                row.singkatanProperty.set(produk.singkatanProperty.get())
-                currentEditingCell?.commitEdit(produk.namaProperty.get())
-            }
+    private fun applyProdukToCell(produk: ProdukData, textField: TextField) {
+        val selectedRow = table.selectionModel.selectedIndex
+        if (selectedRow >= 0 && selectedRow < detailList.size) {
+            val row = detailList[selectedRow]
+            row.idProperty.set(produk.idProperty.get())
+            row.namaProperty.set(produk.namaProperty.get())
+            row.uomProperty.set(produk.uomProperty.get())
+            row.divisiProperty.set(produk.divisiProperty.get())
+            row.singkatanProperty.set(produk.singkatanProperty.get())
+            textField.text = produk.namaProperty.get()
         }
         produkPopup.hide()
-        updateNomorIfReady() // Panggil di sini agar nomor selalu ter-update setelah produk dipilih
+        updateNomorIfReady()
         moveToNextColumn()
     }
+
+
 
     private fun updateNomorIfReady() {
         val firstProduct = detailList.firstOrNull { it.namaProperty.get().isNotBlank() }
@@ -655,7 +652,7 @@ class ProformaController {
                 contractDate = contractDatePicker.value?.toString()
             )
 
-            val preview = PrintPreview(data, cetakBtn.scene.window)
+            val preview = PrintPreview(data, cetakBtn.scene.window, idPerusahaan)
             preview.show()
 
         } catch (e: Exception) {

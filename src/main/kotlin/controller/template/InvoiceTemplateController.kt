@@ -26,6 +26,8 @@ class InvoiceTemplateController {
     @FXML lateinit var dpLabel: Label
     @FXML lateinit var ppnLabel: Label
     @FXML lateinit var grandTotalLabel: Label
+    @FXML lateinit var ownerNameLabel: Label
+    @FXML lateinit var ownerPositionLabel: Label
 
     @FXML
     fun initialize() {
@@ -52,7 +54,7 @@ class InvoiceTemplateController {
         totalCol?.setCellValueFactory { it.value.totalProperty }
     }
 
-    fun populateData(data: DocumentData) {
+    fun populateData(data: DocumentData, idPerusahaan: Int = 1) {
         documentTypeLabel.text = data.documentType
         nomorDokumenLabel.text = "No: ${data.nomorDokumen}"
         tanggalDokumenLabel.text = "Tanggal: ${data.tanggalDokumen}"
@@ -69,5 +71,29 @@ class InvoiceTemplateController {
         dpLabel.text = data.dp
         ppnLabel.text = data.ppn
         grandTotalLabel.text = data.grandTotal
+        
+        loadOwnerData(idPerusahaan)
+    }
+    
+    private fun loadOwnerData(idPerusahaan: Int = 1) {
+        try {
+            val conn = DatabaseHelper.getConnection()
+            val stmt = conn.prepareStatement("SELECT nama_pemilik, jabatan_pemilik FROM perusahaan WHERE id = ?")
+            stmt.setInt(1, idPerusahaan)
+            val rs = stmt.executeQuery()
+            if (rs.next()) {
+                val namaPemilik = rs.getString("nama_pemilik")
+                val jabatanPemilik = rs.getString("jabatan_pemilik")
+                ownerNameLabel.text = if (!namaPemilik.isNullOrBlank()) namaPemilik else "Mario"
+                ownerPositionLabel.text = if (!jabatanPemilik.isNullOrBlank()) jabatanPemilik else "Direktur"
+            } else {
+                ownerNameLabel.text = "Mario"
+                ownerPositionLabel.text = "Direktur"
+            }
+            conn.close()
+        } catch (e: Exception) {
+            ownerNameLabel.text = "Mario"
+            ownerPositionLabel.text = "Direktur"
+        }
     }
 }

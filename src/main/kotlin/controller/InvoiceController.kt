@@ -6,6 +6,7 @@ import javafx.fxml.FXML
 import javafx.geometry.Bounds
 import javafx.geometry.Insets
 import javafx.geometry.Pos
+import javafx.scene.layout.Pane
 import javafx.scene.Scene
 import javafx.scene.control.*
 import javafx.scene.image.ImageView
@@ -73,6 +74,9 @@ class InvoiceController {
     private val proformaRefPopup = Popup()
     private val proformaRefListView = ListView<ProformaRefData>()
     private val proformaRefList = FXCollections.observableArrayList<ProformaRefData>()
+
+    // TextField terpusat untuk autocomplete produk yang lebih stabil
+    private val produkSearchField = TextField()
 
     private var selectedPelanggan: PelangganData? = null
     private var idPerusahaan: Int = 0
@@ -271,73 +275,45 @@ class InvoiceController {
 
         kolomNama.cellFactory = Callback {
             object : TextFieldTableCell<ProdukData, String>() {
-                private var textField: TextField? = null
-
                 override fun startEdit() {
                     super.startEdit()
-                    currentEditingCell = this
-
-                    textField = graphic as? TextField
-                    textField?.let { tf ->
-                        tf.textProperty().addListener { _, _, newValue ->
-                            filterAndShowProduk(newValue)
-                        }
-
-                        tf.setOnKeyPressed { event ->
-                            when (event.code) {
-                                javafx.scene.input.KeyCode.TAB -> {
-                                    event.consume()
-                                    if (produkPopup.isShowing && produkListView.items.isNotEmpty()) {
-                                        val selected = produkListView.selectionModel.selectedItem
-                                            ?: produkListView.items[0]
-                                        applyProdukAndMoveNext(selected)
-                                    } else {
-                                        commitEdit(tf.text)
-                                        moveToNextColumn()
-                                    }
+                    val tf = graphic as? TextField
+                    tf?.textProperty()?.addListener { _, _, newValue ->
+                        filterAndShowProdukForCell(newValue, tf)
+                    }
+                    tf?.setOnKeyPressed { event ->
+                        when (event.code) {
+                            javafx.scene.input.KeyCode.DOWN -> {
+                                if (produkPopup.isShowing) {
+                                    produkListView.requestFocus()
+                                    produkListView.selectionModel.selectFirst()
                                 }
-                                javafx.scene.input.KeyCode.ENTER -> {
-                                    if (produkPopup.isShowing && produkListView.items.isNotEmpty()) {
-                                        val selected = produkListView.selectionModel.selectedItem
-                                            ?: produkListView.items[0]
-                                        applyProdukAndMoveNext(selected)
-                                    } else {
-                                        commitEdit(tf.text)
-                                        moveToNextColumn()
-                                    }
-                                    event.consume()
-                                }
-                                javafx.scene.input.KeyCode.DOWN -> {
-                                    if (produkPopup.isShowing) {
-                                        produkListView.requestFocus()
-                                        if (produkListView.selectionModel.isEmpty) {
-                                            produkListView.selectionModel.selectFirst()
-                                        }
-                                        event.consume()
-                                    }
-                                }
-                                javafx.scene.input.KeyCode.ESCAPE -> {
-                                    produkPopup.hide()
-                                    cancelEdit()
-                                    event.consume()
-                                }
-                                else -> {}
+                                event.consume()
                             }
+                            javafx.scene.input.KeyCode.ENTER, javafx.scene.input.KeyCode.TAB -> {
+                                if (produkPopup.isShowing && produkListView.selectionModel.selectedItem != null) {
+                                    val selected = produkListView.selectionModel.selectedItem
+                                    applyProdukToCell(selected, tf)
+                                    event.consume()
+                                }
+                            }
+                            javafx.scene.input.KeyCode.ESCAPE -> {
+                                produkPopup.hide()
+                                event.consume()
+                            }
+                            else -> {}
                         }
-                        javafx.application.Platform.runLater { tf.requestFocus() }
                     }
                 }
 
                 override fun cancelEdit() {
                     super.cancelEdit()
                     produkPopup.hide()
-                    currentEditingCell = null
                 }
 
                 override fun commitEdit(newValue: String?) {
                     super.commitEdit(newValue)
                     produkPopup.hide()
-                    currentEditingCell = null
                 }
             }
         }
@@ -405,6 +381,8 @@ class InvoiceController {
         ppnCheckBox.selectedProperty().addListener { _, _, _ ->
             updateTotals()
         }
+
+
     }
 
     private fun setupProformaRefAutocomplete() {
@@ -527,7 +505,18 @@ class InvoiceController {
         produkListView.setOnMouseClicked {
             if (it.clickCount == 1 && produkListView.selectionModel.selectedItem != null) {
                 val selectedProduk = produkListView.selectionModel.selectedItem
-                applyProdukAndMoveNext(selectedProduk)
+                val selectedRow = table.selectionModel.selectedIndex
+                if (selectedRow >= 0 && selectedRow < detailList.size) {
+                    val row = detailList[selectedRow]
+                    row.idProperty.set(selectedProduk.idProperty.get())
+                    row.namaProperty.set(selectedProduk.namaProperty.get())
+                    row.uomProperty.set(selectedProduk.uomProperty.get())
+                    row.divisiProperty.set(selectedProduk.divisiProperty.get())
+                    row.singkatanProperty.set(selectedProduk.singkatanProperty.get())
+                }
+                produkPopup.hide()
+                updateNomorIfReady()
+                moveToNextColumn()
             }
         }
 
@@ -550,14 +539,28 @@ class InvoiceController {
         }
     }
 
-    private fun filterAndShowProduk(keyword: String) {
+    private fun showAllProduk() {
+        if (produkList.isNotEmpty()) {
+            produkListView.items.setAll(produkList)
+            produkListView.selectionModel.selectFirst()
+            
+            if (!produkPopup.isShowing) {
+                val bounds = produkSearchField.localToScreen(produkSearchField.boundsInLocal)
+                if (bounds != null) {
+                    produkPopup.show(produkSearchField, bounds.minX, bounds.minY + bounds.height)
+                }
+            }
+        }
+    }
+
+    private fun filterAndShowProdukForCell(keyword: String, textField: TextField) {
         if (keyword.isEmpty()) {
             produkPopup.hide()
             return
         }
 
         val filtered = produkList.filter {
-            it.namaProperty.get().contains(keyword, ignoreCase = true)
+            it.namaProperty.get().contains(keyword.trim(), ignoreCase = true)
         }
 
         if (filtered.isNotEmpty()) {
@@ -565,20 +568,42 @@ class InvoiceController {
             produkListView.selectionModel.selectFirst()
 
             if (!produkPopup.isShowing) {
-                val cell = currentEditingCell
-                if (cell != null) {
-                    val screenBounds: Bounds = cell.localToScreen(cell.boundsInLocal)
-                    produkPopup.show(
-                        cell,
-                        screenBounds.minX,
-                        screenBounds.minY + screenBounds.height
-                    )
+                val bounds = textField.localToScreen(textField.boundsInLocal)
+                if (bounds != null) {
+                    produkPopup.show(textField, bounds.minX, bounds.minY + bounds.height)
                 }
             }
         } else {
             produkPopup.hide()
         }
     }
+
+    private fun applyProdukToCell(produk: ProdukData, textField: TextField) {
+        val selectedRow = table.selectionModel.selectedIndex
+        if (selectedRow >= 0 && selectedRow < detailList.size) {
+            val row = detailList[selectedRow]
+            row.idProperty.set(produk.idProperty.get())
+            row.namaProperty.set(produk.namaProperty.get())
+            row.uomProperty.set(produk.uomProperty.get())
+            row.divisiProperty.set(produk.divisiProperty.get())
+            row.singkatanProperty.set(produk.singkatanProperty.get())
+            textField.text = produk.namaProperty.get()
+        }
+        produkPopup.hide()
+        updateNomorIfReady()
+        moveToNextColumn()
+    }
+
+    private fun hideProdukSearch() {
+        try {
+            (produkSearchField.scene?.root as? Pane)?.children?.remove(produkSearchField)
+        } catch (e: Exception) {
+            // Ignore error jika sudah tidak ada
+        }
+        produkPopup.hide()
+        table.requestFocus()
+    }
+
 
     private fun applyProdukAndMoveNext(produk: ProdukData?) {
         if (produk != null && currentEditingCell != null) {
@@ -592,7 +617,7 @@ class InvoiceController {
                 currentEditingCell?.commitEdit(produk.namaProperty.get())
             }
         }
-        produkPopup.hide()
+        hideProdukSearch()
         updateNomorIfReady() // Panggil di sini agar nomor selalu ter-update setelah produk dipilih
         moveToNextColumn()
     }
@@ -803,7 +828,7 @@ class InvoiceController {
                 contractDate = contractDatePicker.value?.toString()
             )
 
-            val preview = PrintPreview(data, cetakBtn.scene.window)
+            val preview = PrintPreview(data, cetakBtn.scene.window, idPerusahaan)
             preview.show()
 
         } catch (e: Exception) {
