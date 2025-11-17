@@ -1,25 +1,42 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<?import javafx.scene.control.*?>
-<?import javafx.scene.layout.*?>
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.DatePicker?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.TableColumn?>
+<?import javafx.scene.control.TableView?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.text.Font?>
 
-<VBox xmlns="http://javafx.com/javafx/11.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controller.DaftarProformaController">
-   <children>
-      <Label style="-fx-font-size: 24px; -fx-font-weight: bold; -fx-padding: 20;" text="Daftar Proforma" />
-      
-      <HBox alignment="CENTER_LEFT" spacing="10" style="-fx-padding: 0 20 10 20;">
-         <Button fx:id="refreshBtn" text="🔄 Refresh" />
-         <Button fx:id="buatBaruBtn" text="➕ Buat Proforma Baru" />
-      </HBox>
-      
-      <TableView fx:id="proformaTable" VBox.vgrow="ALWAYS" style="-fx-padding: 0 20 20 20;">
-         <columns>
-            <TableColumn fx:id="kolomId" text="ID" prefWidth="60" />
-            <TableColumn fx:id="kolomNomor" text="Nomor" prefWidth="150" />
-            <TableColumn fx:id="kolomTanggal" text="Tanggal" prefWidth="120" />
-            <TableColumn fx:id="kolomPelanggan" text="Pelanggan" prefWidth="200" />
-            <TableColumn fx:id="kolomTotal" text="Total" prefWidth="150" />
-         </columns>
-      </TableView>
-   </children>
+<VBox alignment="TOP_CENTER" prefHeight="600.0" prefWidth="800.0" spacing="20.0" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controller.DaftarProformaController">
+    <padding>
+        <Insets bottom="20.0" left="20.0" right="20.0" top="20.0" />
+    </padding>
+    <Label text="Daftar Proforma">
+        <font>
+            <Font name="System Bold" size="24.0" />
+        </font>
+    </Label>
+    <HBox alignment="CENTER_LEFT" spacing="10.0">
+        <Button fx:id="buatBaruBtn" mnemonicParsing="false" text="Buat Proforma Baru" />
+        <Button fx:id="refreshBtn" mnemonicParsing="false" text="Refresh Data" />
+        <Label text="Dari:" style="-fx-font-weight: bold;"/>
+        <DatePicker fx:id="startDatePicker"/>
+        <Label text="Sampai:" style="-fx-font-weight: bold;"/>
+        <DatePicker fx:id="endDatePicker"/>
+    </HBox>
+    <TableView fx:id="proformaTable" prefHeight="200.0" prefWidth="200.0" VBox.vgrow="ALWAYS">
+        <columns>
+            <TableColumn fx:id="kolomId" prefWidth="50.0" text="ID" />
+            <TableColumn fx:id="kolomNomor" prefWidth="150.0" text="Nomor Proforma" />
+            <TableColumn fx:id="kolomTanggal" prefWidth="100.0" text="Tanggal" />
+            <TableColumn fx:id="kolomPelanggan" prefWidth="200.0" text="Pelanggan" />
+            <TableColumn fx:id="kolomTotal" prefWidth="150.0" text="Total" />
+        </columns>
+        <columnResizePolicy>
+            <TableView fx:constant="CONSTRAINED_RESIZE_POLICY" />
+        </columnResizePolicy>
+    </TableView>
 </VBox>

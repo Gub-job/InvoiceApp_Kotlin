@@ -138,26 +138,21 @@
                         <Insets left="200.0" />
                     </VBox.margin>
                 </GridPane>
-                <HBox alignment="CENTER" prefHeight="100.0" prefWidth="200.0" spacing="150.0">
+                <HBox alignment="CENTER_RIGHT" prefHeight="100.0" prefWidth="200.0">
                     <children>
-                        <VBox alignment="CENTER" prefHeight="200.0" prefWidth="100.0">
+                        <VBox alignment="CENTER" prefHeight="200.0" prefWidth="150.0">
                             <children>
-                                <Label text="Disiapkan oleh," />
-                                <Label text="(..................)" VBox.vgrow="ALWAYS">
+                                <Label fx:id="companyNameLabel" text="Nama Perusahaan">
+                                    <font>
+                                        <Font name="System Bold" size="12.0" />
+                                    </font>
+                                </Label>
+                                <Label fx:id="ownerNameLabel" text="Nama Pemilik" VBox.vgrow="ALWAYS">
                                     <VBox.margin>
                                         <Insets top="60.0" />
                                     </VBox.margin>
                                 </Label>
-                            </children>
-                        </VBox>
-                        <VBox alignment="CENTER" prefHeight="200.0" prefWidth="100.0">
-                            <children>
-                                <Label text="Disetujui oleh," />
-                                <Label text="(..................)" VBox.vgrow="ALWAYS">
-                                    <VBox.margin>
-                                        <Insets top="60.0" />
-                                    </VBox.margin>
-                                </Label>
+                                <Label fx:id="ownerPositionLabel" text="Jabatan" />
                             </children>
                         </VBox>
                     </children>

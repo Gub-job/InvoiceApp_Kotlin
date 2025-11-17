@@ -157,8 +157,8 @@ class InvoiceController {
                     id = detailRs.getInt("id_produk"),
                     nama = detailRs.getString("nama_produk"),
                     uom = detailRs.getString("uom"),
-                    qty = detailRs.getDouble("qty").toString(),
-                    harga = detailRs.getDouble("harga").toString()
+                    qty = String.format("%,.2f", detailRs.getDouble("qty")),
+                    harga = String.format("%,.2f", detailRs.getDouble("harga"))
                 )
                 detailList.add(produk)
                 hitungTotalBaris(produk)
@@ -290,7 +290,14 @@ class InvoiceController {
                                 }
                                 event.consume()
                             }
-                            javafx.scene.input.KeyCode.ENTER, javafx.scene.input.KeyCode.TAB -> {
+                            javafx.scene.input.KeyCode.TAB -> {
+                                if (produkPopup.isShowing && produkListView.items.isNotEmpty()) {
+                                    val selected = produkListView.selectionModel.selectedItem ?: produkListView.items[0]
+                                    applyProdukToCell(selected, tf)
+                                    event.consume()
+                                }
+                            }
+                            javafx.scene.input.KeyCode.ENTER -> {
                                 if (produkPopup.isShowing && produkListView.selectionModel.selectedItem != null) {
                                     val selected = produkListView.selectionModel.selectedItem
                                     applyProdukToCell(selected, tf)
@@ -319,12 +326,14 @@ class InvoiceController {
         }
 
         kolomQty.setOnEditCommit {
-            it.rowValue.qtyProperty.set(it.newValue)
+            val value = it.newValue.replace(",", "").toDoubleOrNull() ?: 0.0
+            it.rowValue.qtyProperty.set(String.format("%,.2f", value))
             hitungTotalBaris(it.rowValue)
             updateTotals()
         }
         kolomHarga.setOnEditCommit {
-            it.rowValue.hargaProperty.set(it.newValue)
+            val value = it.newValue.replace(",", "").toDoubleOrNull() ?: 0.0
+            it.rowValue.hargaProperty.set(String.format("%,.2f", value))
             hitungTotalBaris(it.rowValue)
             updateTotals()
         }
@@ -472,8 +481,8 @@ class InvoiceController {
                     id = detailRs.getInt("id_produk"),
                     nama = detailRs.getString("nama_produk"),
                     uom = detailRs.getString("uom"),
-                    qty = detailRs.getDouble("qty").toString(),
-                    harga = detailRs.getDouble("harga").toString(),
+                    qty = String.format("%,.2f", detailRs.getDouble("qty")),
+                    harga = String.format("%,.2f", detailRs.getDouble("harga")),
                     divisi = detailRs.getString("divisi"),
                     singkatan = detailRs.getString("singkatan")
                 )
@@ -515,6 +524,8 @@ class InvoiceController {
                     row.singkatanProperty.set(selectedProduk.singkatanProperty.get())
                 }
                 produkPopup.hide()
+                table.edit(-1, null)
+                table.refresh()
                 updateNomorIfReady()
                 moveToNextColumn()
             }
@@ -525,7 +536,20 @@ class InvoiceController {
                 javafx.scene.input.KeyCode.ENTER, javafx.scene.input.KeyCode.TAB -> {
                     val selectedProduk = produkListView.selectionModel.selectedItem
                     if (selectedProduk != null) {
-                        applyProdukAndMoveNext(selectedProduk)
+                        val selectedRow = table.selectionModel.selectedIndex
+                        if (selectedRow >= 0 && selectedRow < detailList.size) {
+                            val row = detailList[selectedRow]
+                            row.idProperty.set(selectedProduk.idProperty.get())
+                            row.namaProperty.set(selectedProduk.namaProperty.get())
+                            row.uomProperty.set(selectedProduk.uomProperty.get())
+                            row.divisiProperty.set(selectedProduk.divisiProperty.get())
+                            row.singkatanProperty.set(selectedProduk.singkatanProperty.get())
+                        }
+                        produkPopup.hide()
+                        table.edit(-1, null)
+                        table.refresh()
+                        updateNomorIfReady()
+                        moveToNextColumn()
                     }
                     event.consume()
                 }
@@ -587,9 +611,10 @@ class InvoiceController {
             row.uomProperty.set(produk.uomProperty.get())
             row.divisiProperty.set(produk.divisiProperty.get())
             row.singkatanProperty.set(produk.singkatanProperty.get())
-            textField.text = produk.namaProperty.get()
         }
         produkPopup.hide()
+        table.edit(-1, null)
+        table.refresh()
         updateNomorIfReady()
         moveToNextColumn()
     }
@@ -665,7 +690,7 @@ class InvoiceController {
         conn.autoCommit = false
         try {
             // 2. Hitung semua nilai yang akan disimpan
-            val subtotal = detailList.sumOf { it.totalProperty.get().replace(",", ".").toDoubleOrNull() ?: 0.0 }
+            val subtotal = detailList.sumOf { it.totalProperty.get().replace(",", "").toDoubleOrNull() ?: 0.0 }
             val ppnRate = if (ppnCheckBox.isSelected) 11.0 else 0.0
             val dpPercentage = dpField.text.toDoubleOrNull() ?: 0.0
             val dpAmount = subtotal * (dpPercentage / 100.0)
@@ -719,9 +744,9 @@ class InvoiceController {
                 )
                 detailStmt.setInt(1, idInvoiceBaru)
                 detailStmt.setInt(2, produk.idProperty.get())
-                detailStmt.setDouble(3, produk.qtyProperty.get().toDoubleOrNull() ?: 0.0)
-                detailStmt.setDouble(4, produk.hargaProperty.get().toDoubleOrNull() ?: 0.0)
-                detailStmt.setDouble(5, produk.totalProperty.get().toDoubleOrNull() ?: 0.0)
+                detailStmt.setDouble(3, produk.qtyProperty.get().replace(",", "").toDoubleOrNull() ?: 0.0)
+                detailStmt.setDouble(4, produk.hargaProperty.get().replace(",", "").toDoubleOrNull() ?: 0.0)
+                detailStmt.setDouble(5, produk.totalProperty.get().replace(",", "").toDoubleOrNull() ?: 0.0)
                 detailStmt.executeUpdate()
             }
 
@@ -746,7 +771,7 @@ class InvoiceController {
         conn.autoCommit = false
         try {
             // 1. Hitung semua nilai
-            val subtotal = detailList.sumOf { it.totalProperty.get().replace(",", ".").toDoubleOrNull() ?: 0.0 }
+            val subtotal = detailList.sumOf { it.totalProperty.get().replace(",", "").toDoubleOrNull() ?: 0.0 }
             val ppnRate = if (ppnCheckBox.isSelected) 11.0 else 0.0
             val dpPercentage = dpField.text.toDoubleOrNull() ?: 0.0
             val dpAmount = subtotal * (dpPercentage / 100.0)
@@ -785,9 +810,9 @@ class InvoiceController {
                 )
                 detailStmt.setInt(1, idInvoiceBaru)
                 detailStmt.setInt(2, produk.idProperty.get())
-                detailStmt.setDouble(3, produk.qtyProperty.get().toDoubleOrNull() ?: 0.0)
-                detailStmt.setDouble(4, produk.hargaProperty.get().toDoubleOrNull() ?: 0.0)
-                detailStmt.setDouble(5, produk.totalProperty.get().toDoubleOrNull() ?: 0.0)
+                detailStmt.setDouble(3, produk.qtyProperty.get().replace(",", "").toDoubleOrNull() ?: 0.0)
+                detailStmt.setDouble(4, produk.hargaProperty.get().replace(",", "").toDoubleOrNull() ?: 0.0)
+                detailStmt.setDouble(5, produk.totalProperty.get().replace(",", "").toDoubleOrNull() ?: 0.0)
                 detailStmt.executeUpdate()
             }
 
@@ -932,10 +957,10 @@ class InvoiceController {
 
     private fun hitungTotalBaris(item: ProdukData) {
         try {
-            val qty = item.qtyProperty.get().toDoubleOrNull() ?: 0.0
-            val harga = item.hargaProperty.get().toDoubleOrNull() ?: 0.0
+            val qty = item.qtyProperty.get().replace(",", "").toDoubleOrNull() ?: 0.0
+            val harga = item.hargaProperty.get().replace(",", "").toDoubleOrNull() ?: 0.0
             val total = qty * harga
-            item.totalProperty.set(total.toString())
+            item.totalProperty.set(String.format("%,.2f", total))
         } catch (e: Exception) {
             item.totalProperty.set("0")
         }

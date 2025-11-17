@@ -17,7 +17,7 @@ import javax.imageio.ImageIO
 
 object TemplatePdfGenerator {
 
-    fun generatePdf(data: DocumentData, stream: OutputStream) {
+    fun generatePdf(data: DocumentData, stream: OutputStream, idPerusahaan: Int = 1) {
         try {
             // 1. Muat FXML dan Controller
             val loader = FXMLLoader(javaClass.getResource("/view/InvoiceTemplate.fxml"))
@@ -25,7 +25,7 @@ object TemplatePdfGenerator {
             val controller = loader.getController<controller.template.InvoiceTemplateController>()
 
             // 2. Isi data ke template
-            controller.populateData(data)
+            controller.populateData(data, idPerusahaan)
 
             // 3. Render scene dan tunggu selesai
             val scene = Scene(root)
@@ -36,7 +36,10 @@ object TemplatePdfGenerator {
             }
             Thread.sleep(100) // Tunggu rendering selesai
             
-            val snapshot = root.snapshot(null, null)
+            // Kualitas terbaik dengan scale factor 4x
+            val params = javafx.scene.SnapshotParameters()
+            params.transform = javafx.scene.transform.Scale(4.0, 4.0)
+            val snapshot = root.snapshot(params, null)
             val bufferedImage = SwingFXUtils.fromFXImage(snapshot, null)
 
             // 4. Buat PDF dan masukkan gambar snapshot

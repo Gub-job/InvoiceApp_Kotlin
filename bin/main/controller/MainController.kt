@@ -216,6 +216,24 @@ class MainController {
         }
     }
 
+    fun bukaDaftarPiutang() {
+        if (idPerusahaanAktif == 0) {
+            showAlert(Alert.AlertType.WARNING, "Peringatan", "Belum ada perusahaan dipilih. Silakan pilih perusahaan terlebih dahulu.")
+            return
+        }
+
+        try {
+            val loader = FXMLLoader(javaClass.getResource("/view/DaftarPiutangView.fxml"))
+            val view = loader.load<VBox>()
+            val controller = loader.getController<DaftarPiutangController>()
+            controller.setPerusahaanId(idPerusahaanAktif)
+            showScreen(view)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            showAlert(Alert.AlertType.ERROR, "Error", "Gagal membuka daftar piutang: ${e.message}")
+        }
+    }
+
     fun showScreen(content: Node) {
         mainPane.center = content
     }

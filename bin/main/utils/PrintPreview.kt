@@ -26,7 +26,7 @@ import java.io.File
 import java.awt.print.PrinterJob
 import java.io.FileInputStream
 
-class PrintPreview(private val data: DocumentData, private val owner: Window) {
+class PrintPreview(private val data: DocumentData, private val owner: Window, private val idPerusahaan: Int = 1) {
 
     private val stage = Stage()
     private val pdfBytes: ByteArray
@@ -34,7 +34,7 @@ class PrintPreview(private val data: DocumentData, private val owner: Window) {
     init {
         // 1. Generate PDF ke memory
         val baos = ByteArrayOutputStream()
-        TemplatePdfGenerator.generatePdf(data, baos) // UBAH DI SINI
+        TemplatePdfGenerator.generatePdf(data, baos, idPerusahaan)
         pdfBytes = baos.toByteArray()
     }
 

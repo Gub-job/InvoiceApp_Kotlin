@@ -39,6 +39,7 @@
                     <MenuItem onAction="#bukaInputPenjualan" text="Input Penjualan" />
                     <MenuItem onAction="#bukaDaftarProforma" text="Daftar Proforma" />
                     <MenuItem onAction="#bukaDaftarInvoice" text="Daftar Invoice" />
+                    <MenuItem onAction="#bukaDaftarPiutang" text="Daftar Piutang" />
                 </Menu>
 
                 <Menu

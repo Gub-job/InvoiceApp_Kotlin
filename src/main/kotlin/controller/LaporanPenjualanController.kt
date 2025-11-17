@@ -29,6 +29,8 @@ class LaporanPenjualanController {
     @FXML private lateinit var kolomQty: TableColumn<LaporanData, String>
     @FXML private lateinit var kolomHarga: TableColumn<LaporanData, String>
     @FXML private lateinit var kolomTotal: TableColumn<LaporanData, String>
+    @FXML private lateinit var kolomPpn: TableColumn<LaporanData, String>
+    @FXML private lateinit var kolomTotalDenganPpn: TableColumn<LaporanData, String>
 
 
     private val laporanList = FXCollections.observableArrayList<LaporanData>()
@@ -56,6 +58,8 @@ class LaporanPenjualanController {
         kolomQty.setCellValueFactory { it.value.qtyProperty }
         kolomHarga.setCellValueFactory { it.value.hargaProperty }
         kolomTotal.setCellValueFactory { it.value.totalProperty }
+        kolomPpn.setCellValueFactory { it.value.ppnProperty }
+        kolomTotalDenganPpn.setCellValueFactory { it.value.totalDenganPpnProperty }
 
         tableView.items = laporanList
 
@@ -218,7 +222,7 @@ class LaporanPenjualanController {
                 
                 // Header
                 val headerRow = sheet.createRow(0)
-                val headers = arrayOf("Tanggal", "Nomor", "Pelanggan", "Produk", "Qty", "Harga", "Total")
+                val headers = arrayOf("Tanggal", "Nomor", "Pelanggan", "Produk", "Qty", "Harga", "Total", "PPN", "Total + PPN")
                 headers.forEachIndexed { index, header ->
                     headerRow.createCell(index).setCellValue(header)
                 }
@@ -233,6 +237,8 @@ class LaporanPenjualanController {
                     row.createCell(4).setCellValue(data.qtyProperty.get())
                     row.createCell(5).setCellValue(data.hargaProperty.get())
                     row.createCell(6).setCellValue(data.totalProperty.get())
+                    row.createCell(7).setCellValue(data.ppnProperty.get())
+                    row.createCell(8).setCellValue(data.totalDenganPpnProperty.get())
                 }
                 
                 // Auto size columns

@@ -167,5 +167,7 @@ object CreateProformaTables {
 
     private fun addAdminNameToPerusahaan(conn: java.sql.Connection) {
         addColumnIfNotExists(conn, "perusahaan", "nama_admin", "TEXT")
+        addColumnIfNotExists(conn, "perusahaan", "nama_pemilik", "TEXT")
+        addColumnIfNotExists(conn, "perusahaan", "jabatan_pemilik", "TEXT")
     }
 }

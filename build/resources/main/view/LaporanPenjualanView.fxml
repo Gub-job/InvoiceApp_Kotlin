@@ -41,7 +41,9 @@
                 <TableColumn fx:id="kolomNamaProduk" prefWidth="200.0" text="Nama Produk"/>
                 <TableColumn fx:id="kolomQty" prefWidth="70.0" text="Qty"/>
                 <TableColumn fx:id="kolomHarga" prefWidth="100.0" text="Harga"/>
-                <TableColumn fx:id="kolomTotal" prefWidth="120.0" text="Total"/>
+                <TableColumn fx:id="kolomTotal" prefWidth="100.0" text="Total"/>
+                <TableColumn fx:id="kolomPpn" prefWidth="100.0" text="PPN"/>
+                <TableColumn fx:id="kolomTotalDenganPpn" prefWidth="120.0" text="Total + PPN"/>
             </columns>
             <columnResizePolicy>
                 <TableView fx:constant="CONSTRAINED_RESIZE_POLICY" />

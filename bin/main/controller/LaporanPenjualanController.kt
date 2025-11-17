@@ -29,6 +29,9 @@ class LaporanPenjualanController {
     @FXML private lateinit var kolomQty: TableColumn<LaporanData, String>
     @FXML private lateinit var kolomHarga: TableColumn<LaporanData, String>
     @FXML private lateinit var kolomTotal: TableColumn<LaporanData, String>
+    @FXML private lateinit var kolomPpn: TableColumn<LaporanData, String>
+    @FXML private lateinit var kolomTotalDenganPpn: TableColumn<LaporanData, String>
+
 
     private val laporanList = FXCollections.observableArrayList<LaporanData>()
     private val produkList = FXCollections.observableArrayList<ProdukData>()
@@ -55,6 +58,9 @@ class LaporanPenjualanController {
         kolomQty.setCellValueFactory { it.value.qtyProperty }
         kolomHarga.setCellValueFactory { it.value.hargaProperty }
         kolomTotal.setCellValueFactory { it.value.totalProperty }
+        kolomPpn.setCellValueFactory { it.value.ppnProperty }
+        kolomTotalDenganPpn.setCellValueFactory { it.value.totalDenganPpnProperty }
+
         tableView.items = laporanList
 
 
@@ -108,7 +114,8 @@ class LaporanPenjualanController {
             val queryBuilder = StringBuilder()
             queryBuilder.append("""
                 SELECT 
-                    i.tanggal, i.nomor_invoice as nomor, pel.nama as pelanggan, pr.nama_produk, di.qty, di.harga, di.total
+                    i.tanggal, i.nomor_invoice as nomor, pel.nama as pelanggan, pr.nama_produk, di.qty, di.harga, di.total,
+                    i.tax as ppn_invoice, i.total as subtotal_invoice, i.dp
                 FROM invoice i
                 JOIN pelanggan pel ON i.id_pelanggan = pel.id
                 JOIN detail_invoice di ON i.id_invoice = di.id_invoice
@@ -132,14 +139,35 @@ class LaporanPenjualanController {
             val rs = stmt.executeQuery()
             val formatter = DateTimeFormatter.ofPattern("dd-MM-yyyy")
             while (rs.next()) {
+                val itemTotal = rs.getDouble("total")
+                val subtotalInvoice = rs.getDouble("subtotal_invoice")
+                val dpInvoice = rs.getDouble("dp")
+                val ppnInvoice = rs.getDouble("ppn_invoice")
+
+                val ppnItem: Double
+                // Logika perhitungan PPN per item disesuaikan dengan cara PPN dihitung di Invoice
+                // Jika ada DP, PPN dihitung dari DP. Jika tidak, dari subtotal.
+                // PPN per item didistribusikan secara proporsional.
+                if (dpInvoice > 0) {
+                    // Jika PPN dihitung dari DP, distribusikan PPN berdasarkan rasio item terhadap subtotal
+                    ppnItem = if (subtotalInvoice > 0) (itemTotal / subtotalInvoice) * ppnInvoice else 0.0
+                } else {
+                    // Jika PPN dihitung dari subtotal, distribusikan PPN berdasarkan rasio item terhadap subtotal
+                    ppnItem = if (subtotalInvoice > 0) (itemTotal / subtotalInvoice) * ppnInvoice else 0.0
+                }
+
+                val totalDenganPpnItem = itemTotal + ppnItem
+
                 laporanList.add(LaporanData(
                     LocalDate.parse(rs.getString("tanggal")).format(formatter),
                     rs.getString("nomor"),
                     rs.getString("pelanggan"),
                     rs.getString("nama_produk"),
-                    String.format("%.2f", rs.getDouble("qty")),
-                    String.format("%,.2f", rs.getDouble("harga")),
-                    String.format("%,.2f", rs.getDouble("total"))
+                    String.format(Locale.GERMAN, "%.2f", rs.getDouble("qty")),
+                    String.format(Locale.GERMAN, "%,.2f", rs.getDouble("harga")),
+                    String.format(Locale.GERMAN, "%,.2f", itemTotal),
+                    String.format(Locale.GERMAN, "%,.2f", ppnItem),
+                    String.format(Locale.GERMAN, "%,.2f", totalDenganPpnItem)
                 ))
             }
         } catch (e: Exception) {
@@ -162,11 +190,12 @@ class LaporanPenjualanController {
             
             val stage = javafx.stage.Stage()
             stage.title = "Preview Cetak Laporan"
-            stage.scene = javafx.scene.Scene(root, 1000.0, 700.0)
+            stage.scene = javafx.scene.Scene(root) // Hapus ukuran tetap
             stage.minWidth = 800.0
             stage.minHeight = 600.0
             stage.isResizable = true
-            stage.show()
+            stage.isMaximized = true // Buat jendela langsung maximized
+            stage.show() // Tampilkan setelah di-set maximized
         } catch (e: Exception) {
             e.printStackTrace()
             showAlert(Alert.AlertType.ERROR, "Error", "Gagal membuka preview cetak: ${e.message}")
@@ -193,7 +222,7 @@ class LaporanPenjualanController {
                 
                 // Header
                 val headerRow = sheet.createRow(0)
-                val headers = arrayOf("Tanggal", "Nomor", "Pelanggan", "Produk", "Qty", "Harga", "Total")
+                val headers = arrayOf("Tanggal", "Nomor", "Pelanggan", "Produk", "Qty", "Harga", "Total", "PPN", "Total + PPN")
                 headers.forEachIndexed { index, header ->
                     headerRow.createCell(index).setCellValue(header)
                 }
@@ -208,6 +237,8 @@ class LaporanPenjualanController {
                     row.createCell(4).setCellValue(data.qtyProperty.get())
                     row.createCell(5).setCellValue(data.hargaProperty.get())
                     row.createCell(6).setCellValue(data.totalProperty.get())
+                    row.createCell(7).setCellValue(data.ppnProperty.get())
+                    row.createCell(8).setCellValue(data.totalDenganPpnProperty.get())
                 }
                 
                 // Auto size columns

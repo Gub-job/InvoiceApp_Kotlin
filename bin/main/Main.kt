@@ -4,6 +4,8 @@ import javafx.application.Application
 import javafx.application.Platform
 import javafx.fxml.FXMLLoader
 import javafx.scene.Scene
+import javafx.scene.control.Alert
+import javafx.scene.control.ButtonType
 import javafx.stage.Modality
 import javafx.stage.Stage
 import controller.PerusahaanController
@@ -43,6 +45,20 @@ class MainApp : Application() {
             stage.minWidth = 800.0
             stage.minHeight = 600.0
             stage.isMaximized = true
+            
+            // Konfirmasi keluar saat tombol X ditekan
+            stage.setOnCloseRequest { event ->
+                val alert = Alert(Alert.AlertType.CONFIRMATION)
+                alert.title = "Konfirmasi Keluar"
+                alert.headerText = "Yakin ingin keluar dari aplikasi?"
+                alert.contentText = null
+                
+                val result = alert.showAndWait()
+                if (result.get() != ButtonType.OK) {
+                    event.consume() // Batalkan penutupan
+                }
+            }
+            
             stage.show()
         } else {
             println("Tidak ada perusahaan dipilih, aplikasi ditutup.")

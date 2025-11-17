@@ -26,6 +26,7 @@ class InvoiceTemplateController {
     @FXML lateinit var dpLabel: Label
     @FXML lateinit var ppnLabel: Label
     @FXML lateinit var grandTotalLabel: Label
+    @FXML lateinit var companyNameLabel: Label
     @FXML lateinit var ownerNameLabel: Label
     @FXML lateinit var ownerPositionLabel: Label
 
@@ -78,22 +79,27 @@ class InvoiceTemplateController {
     private fun loadOwnerData(idPerusahaan: Int = 1) {
         try {
             val conn = DatabaseHelper.getConnection()
-            val stmt = conn.prepareStatement("SELECT nama_pemilik, jabatan_pemilik FROM perusahaan WHERE id = ?")
+            val stmt = conn.prepareStatement("SELECT nama, nama_pemilik, jabatan_pemilik FROM perusahaan WHERE id = ?")
             stmt.setInt(1, idPerusahaan)
             val rs = stmt.executeQuery()
             if (rs.next()) {
+                val namaPerusahaan = rs.getString("nama")
                 val namaPemilik = rs.getString("nama_pemilik")
                 val jabatanPemilik = rs.getString("jabatan_pemilik")
-                ownerNameLabel.text = if (!namaPemilik.isNullOrBlank()) namaPemilik else "Mario"
-                ownerPositionLabel.text = if (!jabatanPemilik.isNullOrBlank()) jabatanPemilik else "Direktur"
+                companyNameLabel.text = if (!namaPerusahaan.isNullOrBlank()) namaPerusahaan else "Nama Perusahaan"
+                ownerNameLabel.text = if (!namaPemilik.isNullOrBlank()) namaPemilik else "Nama Pemilik"
+                ownerPositionLabel.text = if (!jabatanPemilik.isNullOrBlank()) jabatanPemilik else "Jabatan"
             } else {
-                ownerNameLabel.text = "Mario"
-                ownerPositionLabel.text = "Direktur"
+                companyNameLabel.text = "Nama Perusahaan"
+                ownerNameLabel.text = "Nama Pemilik"
+                ownerPositionLabel.text = "Jabatan"
             }
             conn.close()
         } catch (e: Exception) {
-            ownerNameLabel.text = "Mario"
-            ownerPositionLabel.text = "Direktur"
+            e.printStackTrace()
+            companyNameLabel.text = "Nama Perusahaan"
+            ownerNameLabel.text = "Nama Pemilik"
+            ownerPositionLabel.text = "Jabatan"
         }
     }
 }

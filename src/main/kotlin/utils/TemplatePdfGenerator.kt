@@ -36,7 +36,10 @@ object TemplatePdfGenerator {
             }
             Thread.sleep(100) // Tunggu rendering selesai
             
-            val snapshot = root.snapshot(null, null)
+            // Kualitas terbaik dengan scale factor 4x
+            val params = javafx.scene.SnapshotParameters()
+            params.transform = javafx.scene.transform.Scale(4.0, 4.0)
+            val snapshot = root.snapshot(params, null)
             val bufferedImage = SwingFXUtils.fromFXImage(snapshot, null)
 
             // 4. Buat PDF dan masukkan gambar snapshot

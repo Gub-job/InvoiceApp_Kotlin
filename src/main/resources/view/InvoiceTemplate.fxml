@@ -142,7 +142,11 @@
                     <children>
                         <VBox alignment="CENTER" prefHeight="200.0" prefWidth="150.0">
                             <children>
-                                <Label text="Disetujui oleh," />
+                                <Label fx:id="companyNameLabel" text="Nama Perusahaan">
+                                    <font>
+                                        <Font name="System Bold" size="12.0" />
+                                    </font>
+                                </Label>
                                 <Label fx:id="ownerNameLabel" text="Nama Pemilik" VBox.vgrow="ALWAYS">
                                     <VBox.margin>
                                         <Insets top="60.0" />

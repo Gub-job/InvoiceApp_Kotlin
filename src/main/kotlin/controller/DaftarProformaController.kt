@@ -11,6 +11,7 @@ import javafx.stage.Stage
 import model.ProformaData
 import utils.DatabaseHelper
 import java.sql.Connection
+import java.time.LocalDate
 
 class DaftarProformaController {
     
@@ -22,6 +23,8 @@ class DaftarProformaController {
     @FXML private lateinit var kolomTotal: TableColumn<ProformaData, Double>
     @FXML private lateinit var refreshBtn: Button
     @FXML private lateinit var buatBaruBtn: Button
+    @FXML private lateinit var startDatePicker: DatePicker
+    @FXML private lateinit var endDatePicker: DatePicker
     
     private val proformaList = FXCollections.observableArrayList<ProformaData>()
     private var idPerusahaan: Int = 0
@@ -29,6 +32,8 @@ class DaftarProformaController {
     
     fun setIdPerusahaan(id: Int) {
         idPerusahaan = id
+        startDatePicker.value = LocalDate.now().withDayOfMonth(1)
+        endDatePicker.value = LocalDate.now()
         loadProformaList()
     }
     
@@ -58,6 +63,8 @@ class DaftarProformaController {
         
         refreshBtn.setOnAction { loadProformaList() }
         buatBaruBtn.setOnAction { buatProformaBaru() }
+        startDatePicker.valueProperty().addListener { _, _, _ -> loadProformaList() }
+        endDatePicker.valueProperty().addListener { _, _, _ -> loadProformaList() }
 
         // Tambahkan listener untuk double-click pada baris tabel
         proformaTable.setOnMouseClicked { event ->
@@ -73,21 +80,19 @@ class DaftarProformaController {
         proformaList.clear()
         try {
             val conn = DatabaseHelper.getConnection()
-            // Modifikasi query untuk menghitung grand total yang benar
             val stmt = conn.prepareStatement(
                 """
                 SELECT p.id_proforma, p.no_proforma, p.tanggal_proforma, pel.nama as pelanggan_nama,
-                       CASE
-                           WHEN p.dp > 0 THEN p.dp + p.tax
-                           ELSE p.total_dengan_ppn
-                       END as total
+                       p.total_dengan_ppn as total
                 FROM proforma p 
                 LEFT JOIN pelanggan pel ON p.id_pelanggan = pel.id 
-                WHERE p.id_perusahaan = ? 
+                WHERE p.id_perusahaan = ? AND p.tanggal_proforma BETWEEN ? AND ?
                 ORDER BY p.tanggal_proforma DESC, p.id_proforma DESC
             """
             )
             stmt.setInt(1, idPerusahaan)
+            stmt.setString(2, startDatePicker.value?.toString() ?: LocalDate.now().withDayOfMonth(1).toString())
+            stmt.setString(3, endDatePicker.value?.toString() ?: LocalDate.now().toString())
             val rs = stmt.executeQuery()
             
             while (rs.next()) {

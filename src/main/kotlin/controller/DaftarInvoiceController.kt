@@ -23,6 +23,8 @@ class DaftarInvoiceController {
     @FXML private lateinit var kolomTotal: TableColumn<InvoiceData, Double>
     @FXML private lateinit var refreshBtn: Button
     @FXML private lateinit var buatBaruBtn: Button
+    @FXML private lateinit var startDatePicker: DatePicker
+    @FXML private lateinit var endDatePicker: DatePicker
 
     private val invoiceList = FXCollections.observableArrayList<InvoiceData>()
     private var idPerusahaan: Int = 0
@@ -30,6 +32,8 @@ class DaftarInvoiceController {
 
     fun setIdPerusahaan(id: Int) {
         idPerusahaan = id
+        startDatePicker.value = LocalDate.now().withDayOfMonth(1)
+        endDatePicker.value = LocalDate.now()
         loadInvoiceList()
     }
 
@@ -59,6 +63,8 @@ class DaftarInvoiceController {
 
         refreshBtn.setOnAction { loadInvoiceList() }
         buatBaruBtn.setOnAction { buatInvoiceBaru() }
+        startDatePicker.valueProperty().addListener { _, _, _ -> loadInvoiceList() }
+        endDatePicker.valueProperty().addListener { _, _, _ -> loadInvoiceList() }
         
         // Double-click untuk membuka invoice dalam jendela terpisah
         invoiceTable.setOnMouseClicked { event ->
@@ -77,16 +83,15 @@ class DaftarInvoiceController {
             val stmt = conn.prepareStatement("""
                 SELECT i.id_invoice, i.nomor_invoice, i.tanggal,
                        pel.nama as pelanggan_nama,
-                       CASE
-                           WHEN i.dp > 0 THEN i.dp + i.tax
-                           ELSE i.total_dengan_ppn
-                       END as total
+                       i.total_dengan_ppn as total
                 FROM invoice i
                 LEFT JOIN pelanggan pel ON i.id_pelanggan = pel.id
-                WHERE i.id_perusahaan = ?
+                WHERE i.id_perusahaan = ? AND i.tanggal BETWEEN ? AND ?
                 ORDER BY i.tanggal DESC, i.id_invoice DESC
             """)
             stmt.setInt(1, idPerusahaan)
+            stmt.setString(2, startDatePicker.value?.toString() ?: LocalDate.now().withDayOfMonth(1).toString())
+            stmt.setString(3, endDatePicker.value?.toString() ?: LocalDate.now().toString())
             val rs = stmt.executeQuery()
 
             while (rs.next()) {

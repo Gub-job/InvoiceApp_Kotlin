@@ -5,6 +5,7 @@ import javafx.collections.FXCollections
 import javafx.fxml.FXML
 import javafx.geometry.Bounds
 import javafx.scene.control.*
+import javafx.scene.layout.Pane
 import javafx.scene.control.cell.TextFieldTableCell
 import javafx.stage.Popup
 import javafx.stage.Stage
@@ -42,7 +43,7 @@ class ProformaController {
     @FXML private lateinit var tambahBtn: Button
     @FXML private lateinit var cetakBtn: Button
     // Tambahkan @FXML untuk komponen PPN dari FXML
-    @FXML private lateinit var ppnField: Label
+    @FXML private lateinit var ppnCheckBox: CheckBox
     @FXML private lateinit var subtotalLabel: Label
     @FXML private lateinit var dpAmountLabel: Label
     @FXML private lateinit var ppnAmountLabel: Label
@@ -56,6 +57,9 @@ class ProformaController {
     private val listView = ListView<PelangganData>()
     private val produkPopup = Popup()
     private val produkListView = ListView<ProdukData>()
+
+    // TextField terpusat untuk autocomplete produk yang lebih stabil
+    private val produkSearchField = TextField()
 
     private var selectedPelanggan: PelangganData? = null
     private var idPerusahaan: Int = 0
@@ -102,7 +106,7 @@ class ProformaController {
                 val taxAmount = rs.getDouble("tax")
                 if (subtotal > 0) {
                     val ppnPercentage = (taxAmount / subtotal) * 100
-                    ppnField.text = String.format("%.2f", ppnPercentage).replace(",", ".")
+                    ppnCheckBox.isSelected = ppnPercentage > 0
                 }
                 
                 // Load pelanggan
@@ -129,8 +133,8 @@ class ProformaController {
                     id = detailRs.getInt("id_produk"),
                     nama = detailRs.getString("nama_produk"),
                     uom = detailRs.getString("uom"),
-                    qty = detailRs.getDouble("qty").toString(),
-                    harga = detailRs.getDouble("harga").toString()
+                    qty = String.format("%,.2f", detailRs.getDouble("qty")),
+                    harga = String.format("%,.2f", detailRs.getDouble("harga"))
                 )
                 detailList.add(produk)
                 hitungTotalBaris(produk)
@@ -224,86 +228,65 @@ class ProformaController {
         // Custom cell factory untuk kolomNama dengan autocomplete smooth
         kolomNama.cellFactory = Callback {
             object : TextFieldTableCell<ProdukData, String>() {
-                private var textField: TextField? = null
-
                 override fun startEdit() {
                     super.startEdit()
-                    currentEditingCell = this
-                    
-                    textField = graphic as? TextField
-                    textField?.let { tf ->
-                        tf.textProperty().addListener { _, _, newValue ->
-                            filterAndShowProduk(newValue)
-                        }
-                        
-                        tf.setOnKeyPressed { event ->
-                            when (event.code) {
-                                javafx.scene.input.KeyCode.TAB, javafx.scene.input.KeyCode.RIGHT -> {
-                                    event.consume()
-                                    if (produkPopup.isShowing && produkListView.items.isNotEmpty()) {
-                                        val selected = produkListView.selectionModel.selectedItem 
-                                            ?: produkListView.items[0]
-                                        applyProdukAndMoveNext(selected)
-                                    } else {
-                                        commitEdit(tf.text)
-                                        moveToNextColumn()
-                                    }
+                    val tf = graphic as? TextField
+                    tf?.textProperty()?.addListener { _, _, newValue ->
+                        filterAndShowProdukForCell(newValue, tf)
+                    }
+                    tf?.setOnKeyPressed { event ->
+                        when (event.code) {
+                            javafx.scene.input.KeyCode.DOWN -> {
+                                if (produkPopup.isShowing) {
+                                    produkListView.requestFocus()
+                                    produkListView.selectionModel.selectFirst()
                                 }
-                                javafx.scene.input.KeyCode.ENTER -> {
-                                    if (produkPopup.isShowing && produkListView.items.isNotEmpty()) {
-                                        val selected = produkListView.selectionModel.selectedItem 
-                                            ?: produkListView.items[0]
-                                        applyProdukAndMoveNext(selected)
-                                    } else {
-                                        commitEdit(tf.text)
-                                        moveToNextColumn()
-                                    }
-                                    event.consume()
-                                }
-                                javafx.scene.input.KeyCode.DOWN -> {
-                                    if (produkPopup.isShowing) {
-                                        produkListView.requestFocus()
-                                        if (produkListView.selectionModel.isEmpty) {
-                                            produkListView.selectionModel.selectFirst()
-                                        }
-                                        event.consume()
-                                    }
-                                }
-                                javafx.scene.input.KeyCode.ESCAPE -> {
-                                    produkPopup.hide()
-                                    cancelEdit()
-                                    event.consume()
-                                }
-                                else -> {}
+                                event.consume()
                             }
+                            javafx.scene.input.KeyCode.TAB -> {
+                                if (produkPopup.isShowing && produkListView.items.isNotEmpty()) {
+                                    val selected = produkListView.selectionModel.selectedItem ?: produkListView.items[0]
+                                    applyProdukToCell(selected, tf)
+                                    event.consume()
+                                }
+                            }
+                            javafx.scene.input.KeyCode.ENTER -> {
+                                if (produkPopup.isShowing && produkListView.selectionModel.selectedItem != null) {
+                                    val selected = produkListView.selectionModel.selectedItem
+                                    applyProdukToCell(selected, tf)
+                                    event.consume()
+                                }
+                            }
+                            javafx.scene.input.KeyCode.ESCAPE -> {
+                                produkPopup.hide()
+                                event.consume()
+                            }
+                            else -> {}
                         }
-                        
-                        // Auto focus
-                        javafx.application.Platform.runLater { tf.requestFocus() }
                     }
                 }
 
                 override fun cancelEdit() {
                     super.cancelEdit()
                     produkPopup.hide()
-                    currentEditingCell = null
                 }
 
                 override fun commitEdit(newValue: String?) {
                     super.commitEdit(newValue)
                     produkPopup.hide()
-                    currentEditingCell = null
                 }
             }
         }
 
         kolomQty.setOnEditCommit {
-            it.rowValue.qtyProperty.set(it.newValue)
+            val value = it.newValue.replace(",", "").toDoubleOrNull() ?: 0.0
+            it.rowValue.qtyProperty.set(String.format("%,.2f", value))
             hitungTotalBaris(it.rowValue)
             updateTotals()
         }
         kolomHarga.setOnEditCommit {
-            it.rowValue.hargaProperty.set(it.newValue)
+            val value = it.newValue.replace(",", "").toDoubleOrNull() ?: 0.0
+            it.rowValue.hargaProperty.set(String.format("%,.2f", value))
             hitungTotalBaris(it.rowValue)
             updateTotals()
         }
@@ -374,6 +357,15 @@ class ProformaController {
         }
         
         updateDPDisplay() // Panggil saat inisialisasi
+        
+        // Listener untuk PPN checkbox
+        ppnCheckBox.selectedProperty().addListener { _, _, _ ->
+            updateTotals()
+        }
+
+
+
+
     }
 
     // ===========================================================
@@ -392,11 +384,21 @@ class ProformaController {
         produkListView.prefHeight = 200.0
         produkListView.prefWidth = 300.0
 
-        // Mouse click - langsung apply dan pindah
         produkListView.setOnMouseClicked {
             if (it.clickCount == 1 && produkListView.selectionModel.selectedItem != null) {
                 val selectedProduk = produkListView.selectionModel.selectedItem
-                applyProdukAndMoveNext(selectedProduk)
+                val selectedRow = table.selectionModel.selectedIndex
+                if (selectedRow >= 0 && selectedRow < detailList.size) {
+                    val row = detailList[selectedRow]
+                    row.idProperty.set(selectedProduk.idProperty.get())
+                    row.namaProperty.set(selectedProduk.namaProperty.get())
+                    row.uomProperty.set(selectedProduk.uomProperty.get())
+                    row.divisiProperty.set(selectedProduk.divisiProperty.get())
+                    row.singkatanProperty.set(selectedProduk.singkatanProperty.get())
+                }
+                produkPopup.hide()
+                updateNomorIfReady()
+                moveToNextColumn()
             }
         }
 
@@ -406,7 +408,18 @@ class ProformaController {
                 javafx.scene.input.KeyCode.ENTER, javafx.scene.input.KeyCode.TAB -> {
                     val selectedProduk = produkListView.selectionModel.selectedItem
                     if (selectedProduk != null) {
-                        applyProdukAndMoveNext(selectedProduk)
+                        val selectedRow = table.selectionModel.selectedIndex
+                        if (selectedRow >= 0 && selectedRow < detailList.size) {
+                            val row = detailList[selectedRow]
+                            row.idProperty.set(selectedProduk.idProperty.get())
+                            row.namaProperty.set(selectedProduk.namaProperty.get())
+                            row.uomProperty.set(selectedProduk.uomProperty.get())
+                            row.divisiProperty.set(selectedProduk.divisiProperty.get())
+                            row.singkatanProperty.set(selectedProduk.singkatanProperty.get())
+                        }
+                        produkPopup.hide()
+                        updateNomorIfReady()
+                        moveToNextColumn()
                     }
                     event.consume()
                 }
@@ -420,29 +433,26 @@ class ProformaController {
         }
     }
 
-    private fun filterAndShowProduk(keyword: String) {
+
+
+    private fun filterAndShowProdukForCell(keyword: String, textField: TextField) {
         if (keyword.isEmpty()) {
             produkPopup.hide()
             return
         }
 
         val filtered = produkList.filter {
-            it.namaProperty.get().contains(keyword, ignoreCase = true)
+            it.namaProperty.get().contains(keyword.trim(), ignoreCase = true)
         }
 
         if (filtered.isNotEmpty()) {
             produkListView.items.setAll(filtered)
             produkListView.selectionModel.selectFirst()
-            
+
             if (!produkPopup.isShowing) {
-                val cell = currentEditingCell
-                if (cell != null) {
-                    val screenBounds: Bounds = cell.localToScreen(cell.boundsInLocal)
-                    produkPopup.show(
-                        cell, 
-                        screenBounds.minX, 
-                        screenBounds.minY + screenBounds.height
-                    )
+                val bounds = textField.localToScreen(textField.boundsInLocal)
+                if (bounds != null) {
+                    produkPopup.show(textField, bounds.minX, bounds.minY + bounds.height)
                 }
             }
         } else {
@@ -450,22 +460,24 @@ class ProformaController {
         }
     }
 
-    private fun applyProdukAndMoveNext(produk: ProdukData?) {
-        if (produk != null && currentEditingCell != null) {
-            val row = currentEditingCell?.tableRow?.item
-            if (row != null) {
-                row.idProperty.set(produk.idProperty.get())
-                row.namaProperty.set(produk.namaProperty.get())
-                row.uomProperty.set(produk.uomProperty.get())
-                row.divisiProperty.set(produk.divisiProperty.get())
-                row.singkatanProperty.set(produk.singkatanProperty.get())
-                currentEditingCell?.commitEdit(produk.namaProperty.get())
-            }
+    private fun applyProdukToCell(produk: ProdukData, textField: TextField) {
+        val selectedRow = table.selectionModel.selectedIndex
+        if (selectedRow >= 0 && selectedRow < detailList.size) {
+            val row = detailList[selectedRow]
+            row.idProperty.set(produk.idProperty.get())
+            row.namaProperty.set(produk.namaProperty.get())
+            row.uomProperty.set(produk.uomProperty.get())
+            row.divisiProperty.set(produk.divisiProperty.get())
+            row.singkatanProperty.set(produk.singkatanProperty.get())
         }
         produkPopup.hide()
-        updateNomorIfReady() // Panggil di sini agar nomor selalu ter-update setelah produk dipilih
+        table.edit(-1, null)
+        table.refresh()
+        updateNomorIfReady()
         moveToNextColumn()
     }
+
+
 
     private fun updateNomorIfReady() {
         val firstProduct = detailList.firstOrNull { it.namaProperty.get().isNotBlank() }
@@ -507,8 +519,8 @@ class ProformaController {
         val conn = DatabaseHelper.getConnection()
         conn.autoCommit = false
         try {
-            val subtotal = detailList.sumOf { it.totalProperty.get().replace(",", ".").toDoubleOrNull() ?: 0.0 }
-            val ppnRate = ppnField.text.toDoubleOrNull() ?: 0.0
+            val subtotal = detailList.sumOf { it.totalProperty.get().replace(",", "").toDoubleOrNull() ?: 0.0 }
+            val ppnRate = if (ppnCheckBox.isSelected) 11.0 else 0.0
             val ppnAmount = subtotal * (ppnRate / 100.0)
             val totalDenganPpn = subtotal + ppnAmount
 
@@ -551,8 +563,8 @@ class ProformaController {
         val conn = DatabaseHelper.getConnection()
         conn.autoCommit = false
         try {
-            val subtotal = detailList.sumOf { it.totalProperty.get().replace(",", ".").toDoubleOrNull() ?: 0.0 }
-            val ppnRate = ppnField.text.toDoubleOrNull() ?: 0.0
+            val subtotal = detailList.sumOf { it.totalProperty.get().replace(",", "").toDoubleOrNull() ?: 0.0 }
+            val ppnRate = if (ppnCheckBox.isSelected) 11.0 else 0.0
             val ppnAmount = subtotal * (ppnRate / 100.0)
             val totalDenganPpn = subtotal + ppnAmount
 
@@ -605,11 +617,11 @@ class ProformaController {
             )
             detailStmt.setInt(1, idProforma)
             detailStmt.setInt(2, produk.idProperty.get())
-            detailStmt.setDouble(3, produk.qtyProperty.get().toDoubleOrNull() ?: 0.0)
-            detailStmt.setDouble(4, produk.hargaProperty.get().toDoubleOrNull() ?: 0.0)
-            val total = (produk.qtyProperty.get().toDoubleOrNull() ?: 0.0) *
-                        (produk.hargaProperty.get().toDoubleOrNull() ?: 0.0)
-            detailStmt.setDouble(5, total)
+            val qty = produk.qtyProperty.get().replace(",", "").toDoubleOrNull() ?: 0.0
+            val harga = produk.hargaProperty.get().replace(",", "").toDoubleOrNull() ?: 0.0
+            detailStmt.setDouble(3, qty)
+            detailStmt.setDouble(4, harga)
+            detailStmt.setDouble(5, qty * harga)
             detailStmt.executeUpdate()
         }
     }
@@ -650,7 +662,7 @@ class ProformaController {
                 contractDate = contractDatePicker.value?.toString()
             )
 
-            val preview = PrintPreview(data, cetakBtn.scene.window)
+            val preview = PrintPreview(data, cetakBtn.scene.window, idPerusahaan)
             preview.show()
 
         } catch (e: Exception) {
@@ -696,9 +708,11 @@ class ProformaController {
             listView.items.setAll(filtered)
             listView.selectionModel.selectFirst()
             
-            if (filtered.isNotEmpty()) {
-                val screenBounds: Bounds = pelangganField.localToScreen(pelangganField.boundsInLocal)
-                popup.show(pelangganField, screenBounds.minX, screenBounds.minY + screenBounds.height)
+            if (filtered.isNotEmpty() && pelangganField.scene?.window?.isShowing == true) {
+                val screenBounds = pelangganField.localToScreen(pelangganField.boundsInLocal)
+                if (screenBounds != null) {
+                    popup.show(pelangganField, screenBounds.minX, screenBounds.minY + screenBounds.height)
+                }
             } else {
                 popup.hide()
             }
@@ -754,10 +768,10 @@ class ProformaController {
 
     private fun hitungTotalBaris(item: ProdukData) {
         try {
-            val qty = item.qtyProperty.get().toDoubleOrNull() ?: 0.0
-            val harga = item.hargaProperty.get().toDoubleOrNull() ?: 0.0
+            val qty = item.qtyProperty.get().replace(",", "").toDoubleOrNull() ?: 0.0
+            val harga = item.hargaProperty.get().replace(",", "").toDoubleOrNull() ?: 0.0
             val total = qty * harga
-            item.totalProperty.set(total.toString()) // Simpan sebagai angka, format nanti
+            item.totalProperty.set(String.format("%,.2f", total))
         } catch (e: Exception) {
             item.totalProperty.set("0")
         }
@@ -767,7 +781,7 @@ class ProformaController {
     private fun updateTotals() {
         // 1. Hitung nilai dasar
         val subtotal = detailList.sumOf { it.totalProperty.get().replace(",", "").toDoubleOrNull() ?: 0.0 }
-        val ppnRate = ppnField.text.toDoubleOrNull() ?: 0.0
+        val ppnRate = if (ppnCheckBox.isSelected) 11.0 else 0.0
         val dpAmountValue = calculateDPValue()
 
         // 2. Hitung PPN Amount sesuai aturan: dari DP jika ada, jika tidak dari Subtotal
@@ -805,7 +819,7 @@ class ProformaController {
             stmt.setInt(1, idPerusahaan)
             val rs = stmt.executeQuery()
             if (rs.next()) {
-                ppnField.text = rs.getDouble("default_tax_rate").toString()
+                ppnCheckBox.isSelected = rs.getDouble("default_tax_rate") > 0
             }
         } catch (e: Exception) {
             println("Gagal memuat default tax rate: ${e.message}")

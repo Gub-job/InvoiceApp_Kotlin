@@ -133,8 +133,8 @@ class ProformaController {
                     id = detailRs.getInt("id_produk"),
                     nama = detailRs.getString("nama_produk"),
                     uom = detailRs.getString("uom"),
-                    qty = detailRs.getDouble("qty").toString(),
-                    harga = detailRs.getDouble("harga").toString()
+                    qty = String.format("%,.2f", detailRs.getDouble("qty")),
+                    harga = String.format("%,.2f", detailRs.getDouble("harga"))
                 )
                 detailList.add(produk)
                 hitungTotalBaris(produk)
@@ -243,7 +243,14 @@ class ProformaController {
                                 }
                                 event.consume()
                             }
-                            javafx.scene.input.KeyCode.ENTER, javafx.scene.input.KeyCode.TAB -> {
+                            javafx.scene.input.KeyCode.TAB -> {
+                                if (produkPopup.isShowing && produkListView.items.isNotEmpty()) {
+                                    val selected = produkListView.selectionModel.selectedItem ?: produkListView.items[0]
+                                    applyProdukToCell(selected, tf)
+                                    event.consume()
+                                }
+                            }
+                            javafx.scene.input.KeyCode.ENTER -> {
                                 if (produkPopup.isShowing && produkListView.selectionModel.selectedItem != null) {
                                     val selected = produkListView.selectionModel.selectedItem
                                     applyProdukToCell(selected, tf)
@@ -272,12 +279,14 @@ class ProformaController {
         }
 
         kolomQty.setOnEditCommit {
-            it.rowValue.qtyProperty.set(it.newValue)
+            val value = it.newValue.replace(",", "").toDoubleOrNull() ?: 0.0
+            it.rowValue.qtyProperty.set(String.format("%,.2f", value))
             hitungTotalBaris(it.rowValue)
             updateTotals()
         }
         kolomHarga.setOnEditCommit {
-            it.rowValue.hargaProperty.set(it.newValue)
+            val value = it.newValue.replace(",", "").toDoubleOrNull() ?: 0.0
+            it.rowValue.hargaProperty.set(String.format("%,.2f", value))
             hitungTotalBaris(it.rowValue)
             updateTotals()
         }
@@ -460,9 +469,10 @@ class ProformaController {
             row.uomProperty.set(produk.uomProperty.get())
             row.divisiProperty.set(produk.divisiProperty.get())
             row.singkatanProperty.set(produk.singkatanProperty.get())
-            textField.text = produk.namaProperty.get()
         }
         produkPopup.hide()
+        table.edit(-1, null)
+        table.refresh()
         updateNomorIfReady()
         moveToNextColumn()
     }
@@ -509,7 +519,7 @@ class ProformaController {
         val conn = DatabaseHelper.getConnection()
         conn.autoCommit = false
         try {
-            val subtotal = detailList.sumOf { it.totalProperty.get().replace(",", ".").toDoubleOrNull() ?: 0.0 }
+            val subtotal = detailList.sumOf { it.totalProperty.get().replace(",", "").toDoubleOrNull() ?: 0.0 }
             val ppnRate = if (ppnCheckBox.isSelected) 11.0 else 0.0
             val ppnAmount = subtotal * (ppnRate / 100.0)
             val totalDenganPpn = subtotal + ppnAmount
@@ -553,7 +563,7 @@ class ProformaController {
         val conn = DatabaseHelper.getConnection()
         conn.autoCommit = false
         try {
-            val subtotal = detailList.sumOf { it.totalProperty.get().replace(",", ".").toDoubleOrNull() ?: 0.0 }
+            val subtotal = detailList.sumOf { it.totalProperty.get().replace(",", "").toDoubleOrNull() ?: 0.0 }
             val ppnRate = if (ppnCheckBox.isSelected) 11.0 else 0.0
             val ppnAmount = subtotal * (ppnRate / 100.0)
             val totalDenganPpn = subtotal + ppnAmount
@@ -607,11 +617,11 @@ class ProformaController {
             )
             detailStmt.setInt(1, idProforma)
             detailStmt.setInt(2, produk.idProperty.get())
-            detailStmt.setDouble(3, produk.qtyProperty.get().toDoubleOrNull() ?: 0.0)
-            detailStmt.setDouble(4, produk.hargaProperty.get().toDoubleOrNull() ?: 0.0)
-            val total = (produk.qtyProperty.get().toDoubleOrNull() ?: 0.0) *
-                        (produk.hargaProperty.get().toDoubleOrNull() ?: 0.0)
-            detailStmt.setDouble(5, total)
+            val qty = produk.qtyProperty.get().replace(",", "").toDoubleOrNull() ?: 0.0
+            val harga = produk.hargaProperty.get().replace(",", "").toDoubleOrNull() ?: 0.0
+            detailStmt.setDouble(3, qty)
+            detailStmt.setDouble(4, harga)
+            detailStmt.setDouble(5, qty * harga)
             detailStmt.executeUpdate()
         }
     }
@@ -698,9 +708,11 @@ class ProformaController {
             listView.items.setAll(filtered)
             listView.selectionModel.selectFirst()
             
-            if (filtered.isNotEmpty()) {
-                val screenBounds: Bounds = pelangganField.localToScreen(pelangganField.boundsInLocal)
-                popup.show(pelangganField, screenBounds.minX, screenBounds.minY + screenBounds.height)
+            if (filtered.isNotEmpty() && pelangganField.scene?.window?.isShowing == true) {
+                val screenBounds = pelangganField.localToScreen(pelangganField.boundsInLocal)
+                if (screenBounds != null) {
+                    popup.show(pelangganField, screenBounds.minX, screenBounds.minY + screenBounds.height)
+                }
             } else {
                 popup.hide()
             }
@@ -756,10 +768,10 @@ class ProformaController {
 
     private fun hitungTotalBaris(item: ProdukData) {
         try {
-            val qty = item.qtyProperty.get().toDoubleOrNull() ?: 0.0
-            val harga = item.hargaProperty.get().toDoubleOrNull() ?: 0.0
+            val qty = item.qtyProperty.get().replace(",", "").toDoubleOrNull() ?: 0.0
+            val harga = item.hargaProperty.get().replace(",", "").toDoubleOrNull() ?: 0.0
             val total = qty * harga
-            item.totalProperty.set(total.toString()) // Simpan sebagai angka, format nanti
+            item.totalProperty.set(String.format("%,.2f", total))
         } catch (e: Exception) {
             item.totalProperty.set("0")
         }
