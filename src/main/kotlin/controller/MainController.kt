@@ -19,6 +19,7 @@ import controller.PerusahaanController
 import controller.DaftarProformaController
 import controller.DaftarInvoiceController
 import controller.LaporanPenjualanController
+import controller.LaporanUmurPiutangController
 
 class MainController {
     @FXML
@@ -238,7 +239,7 @@ class MainController {
         mainPane.center = content
     }
 
-    fun bukaLaporan(event: ActionEvent) {
+    fun bukaLaporanPenjualan(event: ActionEvent) {
         if (idPerusahaanAktif == 0) {
             showAlert(Alert.AlertType.WARNING, "Peringatan", "Belum ada perusahaan dipilih. Silakan pilih perusahaan terlebih dahulu.")
             return
@@ -252,7 +253,25 @@ class MainController {
             mainPane.center = content
         } catch (e: Exception) {
             e.printStackTrace()
-            showAlert(Alert.AlertType.ERROR, "Error", "Gagal membuka halaman laporan penjualan: ${e.message}")
+            showAlert(Alert.AlertType.ERROR, "Error", "Gagal membuka laporan penjualan: ${e.message}")
+        }
+    }
+
+    fun bukaLaporanUmurPiutang(event: ActionEvent) {
+        if (idPerusahaanAktif == 0) {
+            showAlert(Alert.AlertType.WARNING, "Peringatan", "Belum ada perusahaan dipilih. Silakan pilih perusahaan terlebih dahulu.")
+            return
+        }
+
+        try {
+            val loader = FXMLLoader(javaClass.getResource("/view/LaporanUmurPiutangView.fxml"))
+            val content = loader.load<VBox>()
+            val controller = loader.getController<LaporanUmurPiutangController>()
+            controller.setPerusahaanId(idPerusahaanAktif)
+            mainPane.center = content
+        } catch (e: Exception) {
+            e.printStackTrace()
+            showAlert(Alert.AlertType.ERROR, "Error", "Gagal membuka laporan umur piutang: ${e.message}")
         }
     }
 

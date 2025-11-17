@@ -45,7 +45,8 @@
                 <Menu
                     style="-fx-text-fill: #1e293b;-fx-font-size: 14px;-fx-font-weight: bold;"
                     text="📈 Laporan">
-                    <MenuItem onAction="#bukaLaporan" text="Laporan Penjualan" />
+                    <MenuItem onAction="#bukaLaporanPenjualan" text="Laporan Penjualan" />
+                    <MenuItem onAction="#bukaLaporanUmurPiutang" text="Laporan Umur Piutang" />
                 </Menu>
             </MenuBar>
 
