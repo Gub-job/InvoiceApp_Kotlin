@@ -54,6 +54,8 @@ class InvoiceController {
     @FXML private lateinit var simpanBtn: Button
     @FXML private lateinit var cetakBtn: Button
     @FXML private lateinit var hapusBtn: Button
+    @FXML private lateinit var hapusItemBtn: Button
+    @FXML private lateinit var cloneBtn: Button
     @FXML private lateinit var tambahBtn: Button
     @FXML private lateinit var ppnCheckBox: CheckBox
     @FXML private lateinit var subtotalLabel: Label 
@@ -92,6 +94,7 @@ class InvoiceController {
         loadProduk()
         loadDefaultTaxRate()
         loadProformaRefs()
+        ensureStatusColumnExist() // Tambahkan ini untuk memastikan kolom status ada
         ensureContractColumnsExist() // Pastikan kolom referensi ada
         // Kosongkan nomor field, akan diisi setelah produk ditambahkan
         nomorField.text = ""
@@ -101,8 +104,10 @@ class InvoiceController {
 
     fun loadInvoice(idInvoice: Int) {
         this.idInvoiceBaru = idInvoice
-        this.isEditMode = true // PENTING: Aktifkan mode edit
-        simpanBtn.text = "Simpan" // Ganti teks tombol jadi "Simpan" untuk mode edit
+        this.isEditMode = true
+        simpanBtn.text = "Simpan"
+        hapusBtn.isDisable = false
+        cloneBtn.isDisable = false
 
         val conn = DatabaseHelper.getConnection()
         try {
@@ -158,7 +163,9 @@ class InvoiceController {
                     nama = detailRs.getString("nama_produk"),
                     uom = detailRs.getString("uom"),
                     qty = String.format("%,.2f", detailRs.getDouble("qty")),
-                    harga = String.format("%,.2f", detailRs.getDouble("harga"))
+                    harga = String.format("%,.2f", detailRs.getDouble("harga")),
+                    divisi = detailRs.getString("divisi") ?: "",
+                    singkatan = detailRs.getString("singkatan") ?: ""
                 )
                 detailList.add(produk)
                 hitungTotalBaris(produk)
@@ -189,6 +196,24 @@ class InvoiceController {
             println("Gagal memastikan kolom referensi kontrak ada: ${e.message}")
         } finally {
             // Hanya tutup koneksi jika kita yang membuatnya
+            if (conn == null) {
+                connection.close()
+            }
+        }
+    }
+
+    private fun ensureStatusColumnExist(conn: Connection? = null) {
+        val connection = conn ?: DatabaseHelper.getConnection()
+        try {
+            val metaData = connection.metaData
+            val rs = metaData.getColumns(null, null, "invoice", "status")
+            if (!rs.next()) {
+                connection.createStatement().execute("ALTER TABLE invoice ADD COLUMN status TEXT")
+                println("Kolom 'status' ditambahkan ke tabel invoice.")
+            }
+        } catch (e: Exception) {
+            println("Gagal memastikan kolom status ada di invoice: ${e.message}")
+        } finally {
             if (conn == null) {
                 connection.close()
             }
@@ -360,7 +385,7 @@ class InvoiceController {
             }
         }
 
-        hapusBtn.setOnAction {
+        hapusItemBtn.setOnAction {
             val selected = table.selectionModel.selectedItem
             if (selected != null) {
                 detailList.remove(selected)
@@ -686,6 +711,18 @@ class InvoiceController {
             return
         }
 
+        // Cek duplikat nomor
+        if (isNomorInvoiceDuplikat(nomorField.text)) {
+            val alert = Alert(Alert.AlertType.CONFIRMATION)
+            alert.title = "Nomor Duplikat"
+            alert.headerText = "Nomor ini sudah ada"
+            alert.contentText = "Nomor invoice '${nomorField.text}' sudah digunakan. Apakah masih mau pakai nomor ini?"
+            val result = alert.showAndWait()
+            if (result.isEmpty || result.get() != ButtonType.OK) {
+                return
+            }
+        }
+
         val conn = DatabaseHelper.getConnection()
         conn.autoCommit = false
         try {
@@ -715,10 +752,14 @@ class InvoiceController {
             println("=== END DEBUG ===")
             
             // 3. Siapkan statement INSERT dengan semua kolom yang dibutuhkan
+            val firstProduct = detailList.firstOrNull()
+            val divisi = firstProduct?.divisiProperty?.get() ?: ""
+
             val stmt = conn.prepareStatement(
                 """
-                INSERT INTO invoice (id_perusahaan, id_pelanggan, nomor_invoice, tanggal, dp, tax, total, total_dengan_ppn, contract_ref, contract_date)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO invoice (id_perusahaan, id_pelanggan, nomor_invoice, tanggal, dp, tax, total, total_dengan_ppn, 
+                                     contract_ref, contract_date, divisi, status)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 Statement.RETURN_GENERATED_KEYS
             )
@@ -732,6 +773,8 @@ class InvoiceController {
             stmt.setDouble(8, grandTotal)     // Simpan grand total (kolom 'total_dengan_ppn')
             stmt.setString(9, contractRefField.text) // Simpan contract ref
             stmt.setString(10, contractDatePicker.value?.toString()) // Simpan contract date
+            stmt.setString(11, divisi)        // Simpan divisi
+            stmt.setString(12, "Aktif")       // Simpan status
             stmt.executeUpdate()
 
             val rs = stmt.generatedKeys
@@ -778,12 +821,15 @@ class InvoiceController {
             val ppnAmount = if (dpAmount > 0) dpAmount * (ppnRate / 100.0) else subtotal * (ppnRate / 100.0)
             val grandTotal = if (dpAmount > 0) dpAmount + ppnAmount else subtotal + ppnAmount
 
+            // Ambil divisi dari produk pertama untuk diupdate
+            val divisi = detailList.firstOrNull()?.divisiProperty?.get() ?: ""
+
             // 2. Siapkan statement UPDATE
             val stmt = conn.prepareStatement(
                 """
                 UPDATE invoice SET
-                    id_pelanggan = ?, nomor_invoice = ?, tanggal = ?, dp = ?, tax = ?,
-                    total = ?, total_dengan_ppn = ?, contract_ref = ?, contract_date = ?
+                    id_pelanggan = ?, nomor_invoice = ?, tanggal = ?, dp = ?, tax = ?, total = ?, 
+                    total_dengan_ppn = ?, contract_ref = ?, contract_date = ?, divisi = ?
                 WHERE id_invoice = ?
                 """
             )
@@ -796,7 +842,8 @@ class InvoiceController {
             stmt.setDouble(7, grandTotal)
             stmt.setString(8, contractRefField.text)
             stmt.setString(9, contractDatePicker.value?.toString())
-            stmt.setInt(10, idInvoiceBaru) // WHERE clause
+            stmt.setString(10, divisi)
+            stmt.setInt(11, idInvoiceBaru) // WHERE clause
             stmt.executeUpdate()
 
             // 3. Hapus detail lama dan masukkan yang baru
@@ -1098,6 +1145,153 @@ class InvoiceController {
             println("Gagal memuat referensi proforma: ${e.message}")
         } finally {
             conn.close()
+        }
+    }
+
+    private fun isNomorInvoiceDuplikat(nomor: String): Boolean {
+        val conn = DatabaseHelper.getConnection()
+        try {
+            val stmt = conn.prepareStatement("SELECT COUNT(*) FROM invoice WHERE nomor_invoice = ? AND id_perusahaan = ?")
+            stmt.setString(1, nomor)
+            stmt.setInt(2, idPerusahaan)
+            val rs = stmt.executeQuery()
+            return rs.next() && rs.getInt(1) > 0
+        } finally {
+            conn.close()
+        }
+    }
+
+@FXML
+private fun onCloneInvoiceClicked() {
+    if (idInvoiceBaru == 0) {
+        showAlert("Peringatan", "Silakan simpan invoice terlebih dahulu.")
+        return
+    }
+
+    val alert = Alert(Alert.AlertType.CONFIRMATION)
+    alert.title = "Konfirmasi Clone"
+    alert.headerText = "Clone Invoice"
+    alert.contentText = "Apakah Anda yakin ingin membuat salinan invoice ini?"
+    
+    val result = alert.showAndWait()
+    if (result.isPresent && result.get() == ButtonType.OK) {
+        val conn = DatabaseHelper.getConnection()
+        conn.autoCommit = false
+        try {
+            val subtotal = detailList.sumOf { it.totalProperty.get().replace(",", "").toDoubleOrNull() ?: 0.0 }
+            val ppnRate = if (ppnCheckBox.isSelected) 11.0 else 0.0
+            val dpPercentage = dpField.text.toDoubleOrNull() ?: 0.0
+            val dpAmount = subtotal * (dpPercentage / 100.0)
+            val ppnAmount = if (dpAmount > 0) dpAmount * (ppnRate / 100.0) else subtotal * (ppnRate / 100.0)
+            val grandTotal = if (dpAmount > 0) dpAmount + ppnAmount else subtotal + ppnAmount
+            
+            // Generate nomor invoice baru
+            val firstProduct = detailList.firstOrNull()
+            val tanggalClone = tanggalPicker.value ?: LocalDate.now()
+            val nomorBaru = if (firstProduct != null) {
+                NomorGenerator.generateNomor(
+                    idPerusahaan,
+                    "invoice",
+                    firstProduct.divisiProperty.get(),
+                    firstProduct.namaProperty.get(),
+                    firstProduct.singkatanProperty.get(),
+                    tanggalClone
+                )
+            } else {
+                "INV-" + System.currentTimeMillis()
+            }
+
+            val divisi = firstProduct?.divisiProperty?.get() ?: ""
+            
+            val stmt = conn.prepareStatement(
+                """INSERT INTO invoice (id_perusahaan, id_pelanggan, nomor_invoice, tanggal, dp, tax, total, total_dengan_ppn, 
+                                       contract_ref, contract_date, divisi, status)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                Statement.RETURN_GENERATED_KEYS
+            )
+            stmt.setInt(1, idPerusahaan)
+            stmt.setInt(2, selectedPelanggan?.idProperty?.get() ?: 0)
+            stmt.setString(3, nomorBaru)
+            stmt.setString(4, tanggalClone.toString())
+            stmt.setDouble(5, dpAmount)
+            stmt.setDouble(6, ppnAmount)
+            stmt.setDouble(7, subtotal)
+            stmt.setDouble(8, grandTotal)
+            stmt.setString(9, nomorBaru) // Gunakan nomor BARU sebagai referensi
+            stmt.setString(10, tanggalClone.toString()) // Gunakan tanggal BARU
+            stmt.setString(11, divisi)
+            stmt.setString(12, "Aktif")
+            stmt.executeUpdate()
+
+            val rs = stmt.generatedKeys
+            val idInvoiceClone = if (rs.next()) rs.getInt(1) else 0
+
+            for (produk in detailList) {
+                val detailStmt = conn.prepareStatement(
+                    "INSERT INTO detail_invoice (id_invoice, id_produk, qty, harga, total) VALUES (?, ?, ?, ?, ?)"
+                )
+                detailStmt.setInt(1, idInvoiceClone)
+                detailStmt.setInt(2, produk.idProperty.get())
+                detailStmt.setDouble(3, produk.qtyProperty.get().replace(",", "").toDoubleOrNull() ?: 0.0)
+                detailStmt.setDouble(4, produk.hargaProperty.get().replace(",", "").toDoubleOrNull() ?: 0.0)
+                detailStmt.setDouble(5, produk.totalProperty.get().replace(",", "").toDoubleOrNull() ?: 0.0)
+                detailStmt.executeUpdate()
+            }
+
+            conn.commit()
+            
+            // ===== UPDATE UI DENGAN NOMOR BARU =====
+            nomorField.text = nomorBaru  // Update nomor invoice
+            tanggalPicker.value = tanggalClone  // Update tanggal
+            idInvoiceBaru = idInvoiceClone  // Update ID
+            contractRefField.text = nomorBaru  // Update contract reference
+            contractDatePicker.value = tanggalClone  // Update contract date
+            // ===== AKHIR UPDATE UI =====
+            
+            showAlert("Sukses", "Invoice berhasil di-clone dengan nomor: $nomorBaru")
+            // JANGAN tutup window agar user bisa lihat nomor baru
+            // (cloneBtn.scene.window as? Stage)?.close()
+        } catch (e: Exception) {
+            conn.rollback()
+            showAlert("Error", "Gagal clone invoice: ${e.message}")
+            e.printStackTrace()
+        } finally {
+            conn.close()
+        }
+    }
+}
+
+    @FXML
+    private fun onHapusInvoiceClicked() {
+        if (idInvoiceBaru == 0) {
+            showAlert("Peringatan", "Tidak ada invoice yang dapat dihapus.")
+            return
+        }
+
+        val alert = Alert(Alert.AlertType.CONFIRMATION)
+        alert.title = "Konfirmasi Hapus"
+        alert.headerText = "Hapus Invoice"
+        alert.contentText = "Apakah Anda yakin ingin menghapus invoice ini?"
+        
+        val result = alert.showAndWait()
+        if (result.isPresent && result.get() == ButtonType.OK) {
+            val conn = DatabaseHelper.getConnection()
+            try {
+                conn.prepareStatement("DELETE FROM detail_invoice WHERE id_invoice = ?").apply {
+                    setInt(1, idInvoiceBaru)
+                    executeUpdate()
+                }
+                conn.prepareStatement("DELETE FROM invoice WHERE id_invoice = ?").apply {
+                    setInt(1, idInvoiceBaru)
+                    executeUpdate()
+                }
+                showAlert("Sukses", "Invoice berhasil dihapus.")
+                (hapusBtn.scene.window as? Stage)?.close()
+            } catch (e: Exception) {
+                showAlert("Error", "Gagal menghapus invoice: ${e.message}")
+            } finally {
+                conn.close()
+            }
         }
     }
 }

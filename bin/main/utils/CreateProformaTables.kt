@@ -91,6 +91,7 @@ object CreateProformaTables {
             addColumnIfNotExists(conn, "proforma", "tanggal", "TEXT")
             addColumnIfNotExists(conn, "proforma", "dp", "REAL DEFAULT 0.0")
             addColumnIfNotExists(conn, "proforma", "tax", "REAL DEFAULT 0.0")
+            addColumnIfNotExists(conn, "proforma", "divisi", "TEXT")
             
             // Tambahkan kolom yang hilang di tabel invoice
             addColumnIfNotExists(conn, "invoice", "id_perusahaan", "INTEGER NOT NULL DEFAULT 1")
@@ -101,6 +102,7 @@ object CreateProformaTables {
             addColumnIfNotExists(conn, "invoice", "tax", "REAL DEFAULT 0.0")
             addColumnIfNotExists(conn, "invoice", "total_dengan_ppn", "REAL DEFAULT 0.0")
             addColumnIfNotExists(conn, "invoice", "dp", "REAL DEFAULT 0.0")
+            addColumnIfNotExists(conn, "invoice", "divisi", "TEXT")
             
         } catch (e: Exception) {
             println("Error saat menambahkan kolom: ${e.message}")

@@ -38,9 +38,11 @@ class ProformaController {
     @FXML private lateinit var kolomUom: TableColumn<ProdukData, String>
     @FXML private lateinit var table: TableView<ProdukData>
     @FXML private lateinit var simpanBtn: Button
-    @FXML private lateinit var konversiBtn: Button
     @FXML private lateinit var hapusBtn: Button
+    @FXML private lateinit var hapusItemBtn: Button
     @FXML private lateinit var tambahBtn: Button
+    @FXML private lateinit var cloneBtn: Button
+    @FXML private lateinit var konversiBtn: Button
     @FXML private lateinit var cetakBtn: Button
     // Tambahkan @FXML untuk komponen PPN dari FXML
     @FXML private lateinit var ppnCheckBox: CheckBox
@@ -74,6 +76,7 @@ class ProformaController {
         loadPelanggan()
         loadProduk()
         loadDefaultTaxRate()
+        ensureStatusColumnExist() // Tambahkan ini untuk memastikan kolom status ada
         // Set tanggal hari ini
         tanggalPicker.value = LocalDate.now()
     }
@@ -81,7 +84,10 @@ class ProformaController {
     fun loadProforma(idProforma: Int) {
         this.idProformaBaru = idProforma
         this.isEditMode = true
-        simpanBtn.text = "Simpan" // Ganti teks tombol
+        simpanBtn.text = "Simpan"
+        hapusBtn.isDisable = false
+        cloneBtn.isDisable = false
+        konversiBtn.isDisable = false
 
         val conn = DatabaseHelper.getConnection()
         try {
@@ -134,7 +140,9 @@ class ProformaController {
                     nama = detailRs.getString("nama_produk"),
                     uom = detailRs.getString("uom"),
                     qty = String.format("%,.2f", detailRs.getDouble("qty")),
-                    harga = String.format("%,.2f", detailRs.getDouble("harga"))
+                    harga = String.format("%,.2f", detailRs.getDouble("harga")),
+                    divisi = detailRs.getString("divisi") ?: "",
+                    singkatan = detailRs.getString("singkatan") ?: ""
                 )
                 detailList.add(produk)
                 hitungTotalBaris(produk)
@@ -144,6 +152,24 @@ class ProformaController {
             showAlert("Error", "Gagal memuat data proforma: ${e.message}")
         } finally {
             conn.close()
+        }
+    }
+
+    private fun ensureStatusColumnExist(conn: Connection? = null) {
+        val connection = conn ?: DatabaseHelper.getConnection()
+        try {
+            val metaData = connection.metaData
+            val rs = metaData.getColumns(null, null, "proforma", "status")
+            if (!rs.next()) {
+                connection.createStatement().execute("ALTER TABLE proforma ADD COLUMN status TEXT")
+                println("Kolom 'status' ditambahkan ke tabel proforma.")
+            }
+        } catch (e: Exception) {
+            println("Gagal memastikan kolom status ada di proforma: ${e.message}")
+        } finally {
+            if (conn == null) {
+                connection.close()
+            }
         }
     }
 
@@ -314,7 +340,7 @@ class ProformaController {
             }
         }
 
-        hapusBtn.setOnAction {
+        hapusItemBtn.setOnAction {
             val selected = table.selectionModel.selectedItem
             if (selected != null) {
                 detailList.remove(selected)
@@ -516,6 +542,18 @@ class ProformaController {
     }
 
     private fun simpanProformaBaru() {
+        // Cek duplikat nomor
+        if (isNomorProformaDuplikat(nomorField.text)) {
+            val alert = Alert(Alert.AlertType.CONFIRMATION)
+            alert.title = "Nomor Duplikat"
+            alert.headerText = "Nomor ini sudah ada"
+            alert.contentText = "Nomor proforma '${nomorField.text}' sudah digunakan. Apakah masih mau pakai nomor ini?"
+            val result = alert.showAndWait()
+            if (result.isEmpty || result.get() != ButtonType.OK) {
+                return
+            }
+        }
+
         val conn = DatabaseHelper.getConnection()
         conn.autoCommit = false
         try {
@@ -524,22 +562,27 @@ class ProformaController {
             val ppnAmount = subtotal * (ppnRate / 100.0)
             val totalDenganPpn = subtotal + ppnAmount
 
+            // Ambil divisi dari produk pertama untuk disimpan
+            val divisi = detailList.firstOrNull()?.divisiProperty?.get() ?: ""
+            
             val sql = """
                 INSERT INTO proforma (id_perusahaan, id_pelanggan, contract_ref, contract_date, 
-                                    total, tax, total_dengan_ppn, no_proforma, tanggal_proforma, dp)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                                    total, tax, total_dengan_ppn, no_proforma, tanggal_proforma, dp, divisi, status)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """
             val stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)
             stmt.setInt(1, idPerusahaan)
             stmt.setInt(2, selectedPelanggan?.idProperty?.get() ?: 0)
-            stmt.setString(3, contractRefField.text)
-            stmt.setString(4, contractDatePicker.value?.toString())
+            stmt.setString(3, contractRefField.text) // Gunakan nilai dari field contract ref
+            stmt.setString(4, contractDatePicker.value?.toString()) // Gunakan nilai dari field contract date
             stmt.setDouble(5, subtotal)
             stmt.setDouble(6, ppnAmount)
             stmt.setDouble(7, totalDenganPpn)
             stmt.setString(8, nomorField.text)
             stmt.setString(9, tanggalPicker.value?.toString() ?: LocalDate.now().toString())
             stmt.setDouble(10, calculateDPValue())
+            stmt.setString(11, divisi)
+            stmt.setString(11, "Aktif") // Menambahkan status default
             stmt.executeUpdate()
 
             val rs = stmt.generatedKeys
@@ -549,8 +592,11 @@ class ProformaController {
 
             conn.commit()
             showAlert("Sukses", "Proforma berhasil disimpan.")
-            isEditMode = true // Setelah simpan, masuk mode edit
+            isEditMode = true
             simpanBtn.text = "Simpan"
+            hapusBtn.isDisable = false
+            cloneBtn.isDisable = false
+            konversiBtn.isDisable = false
         } catch (e: Exception) {
             conn.rollback()
             showAlert("Error", "Gagal menyimpan proforma: ${e.message}")
@@ -567,11 +613,14 @@ class ProformaController {
             val ppnRate = if (ppnCheckBox.isSelected) 11.0 else 0.0
             val ppnAmount = subtotal * (ppnRate / 100.0)
             val totalDenganPpn = subtotal + ppnAmount
+            
+            // Ambil divisi dari produk pertama untuk diupdate
+            val divisi = detailList.firstOrNull()?.divisiProperty?.get() ?: ""
 
             val sql = """
                 UPDATE proforma SET 
                     id_pelanggan = ?, contract_ref = ?, contract_date = ?, total = ?, tax = ?, 
-                    total_dengan_ppn = ?, no_proforma = ?, tanggal_proforma = ?, dp = ?
+                    total_dengan_ppn = ?, no_proforma = ?, tanggal_proforma = ?, dp = ?, divisi = ?
                 WHERE id_proforma = ?
             """
             val stmt = conn.prepareStatement(sql)
@@ -584,7 +633,8 @@ class ProformaController {
             stmt.setString(7, nomorField.text)
             stmt.setString(8, tanggalPicker.value?.toString() ?: LocalDate.now().toString())
             stmt.setDouble(9, calculateDPValue())
-            stmt.setInt(10, idProformaBaru)
+            stmt.setString(10, divisi)
+            stmt.setInt(11, idProformaBaru)
             stmt.executeUpdate()
 
             // Hapus detail lama dan masukkan yang baru
@@ -863,5 +913,223 @@ class ProformaController {
             )
         }
         conn.close()
+    }
+
+    private fun isNomorProformaDuplikat(nomor: String): Boolean {
+        val conn = DatabaseHelper.getConnection()
+        try {
+            val stmt = conn.prepareStatement("SELECT COUNT(*) FROM proforma WHERE no_proforma = ? AND id_perusahaan = ?")
+            stmt.setString(1, nomor)
+            stmt.setInt(2, idPerusahaan)
+            val rs = stmt.executeQuery()
+            return rs.next() && rs.getInt(1) > 0
+        } finally {
+            conn.close()
+        }
+    }
+
+        @FXML
+    private fun onCloneProformaClicked() {
+        if (idProformaBaru == 0) {
+            showAlert("Peringatan", "Silakan simpan proforma terlebih dahulu.")
+            return
+        }
+
+        val alert = Alert(Alert.AlertType.CONFIRMATION)
+        alert.title = "Konfirmasi Clone"
+        alert.headerText = "Clone Proforma"
+        alert.contentText = "Apakah Anda yakin ingin membuat salinan proforma ini?"
+        
+        val result = alert.showAndWait()
+        if (result.isPresent && result.get() == ButtonType.OK) {
+            val conn = DatabaseHelper.getConnection()
+            conn.autoCommit = false
+            try {
+                val subtotal = detailList.sumOf { it.totalProperty.get().replace(",", "").toDoubleOrNull() ?: 0.0 }
+                val ppnRate = if (ppnCheckBox.isSelected) 11.0 else 0.0
+                val ppnAmount = subtotal * (ppnRate / 100.0)
+                val totalDenganPpn = subtotal + ppnAmount
+                
+                // Generate nomor proforma baru
+                val firstProduct = detailList.firstOrNull()
+                val tanggalClone = tanggalPicker.value ?: LocalDate.now()
+                val nomorBaru = if (firstProduct != null) {
+                    NomorGenerator.generateNomor(
+                        idPerusahaan,
+                        "proforma",
+                        firstProduct.divisiProperty.get(),
+                        firstProduct.namaProperty.get(),
+                        firstProduct.singkatanProperty.get(),
+                        tanggalClone
+                    )
+                } else {
+                    "PRO-" + System.currentTimeMillis()
+                }
+
+                // Ambil divisi dari produk pertama untuk disimpan
+                val divisi = detailList.firstOrNull()?.divisiProperty?.get() ?: ""
+                
+                val sql = """
+                    INSERT INTO proforma (id_perusahaan, id_pelanggan, contract_ref, contract_date, 
+                                        total, tax, total_dengan_ppn, no_proforma, tanggal_proforma, dp, divisi, status)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """
+                val stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)
+                stmt.setInt(1, idPerusahaan)
+                stmt.setInt(2, selectedPelanggan?.idProperty?.get() ?: 0)
+                stmt.setString(3, nomorBaru) // contract_ref menggunakan nomor BARU
+                stmt.setString(4, tanggalClone.toString()) // contract_date menggunakan tanggal BARU
+                stmt.setDouble(5, subtotal)
+                stmt.setDouble(6, ppnAmount)
+                stmt.setDouble(7, totalDenganPpn)
+                stmt.setString(8, nomorBaru)
+                stmt.setString(9, tanggalClone.toString())
+                stmt.setDouble(10, calculateDPValue())
+                stmt.setString(11, divisi)
+                stmt.setString(12, "Aktif") // PERBAIKAN: Index 12 untuk status
+                stmt.executeUpdate()
+
+                val rs = stmt.generatedKeys
+                val idProformaClone = if (rs.next()) rs.getInt(1) else 0
+
+                simpanDetailProforma(conn, idProformaClone)
+
+                conn.commit()
+                showAlert("Sukses", "Proforma berhasil di-clone dengan nomor: $nomorBaru")
+                (cloneBtn.scene.window as? Stage)?.close()
+            } catch (e: Exception) {
+                conn.rollback()
+                showAlert("Error", "Gagal clone proforma: ${e.message}")
+                e.printStackTrace() // Tambahkan ini untuk debug
+            } finally {
+                conn.close()
+            }
+        }
+    }
+
+    @FXML
+    private fun onKonversiKeInvoiceClicked() {
+        if (idProformaBaru == 0) {
+            showAlert("Peringatan", "Silakan simpan proforma terlebih dahulu.")
+            return
+        }
+
+        val alert = Alert(Alert.AlertType.CONFIRMATION)
+        alert.title = "Konfirmasi Konversi"
+        alert.headerText = "Konversi ke Invoice"
+        alert.contentText = "Apakah Anda yakin ingin mengkonversi proforma ini menjadi invoice?"
+        
+        val result = alert.showAndWait()
+        if (result.isPresent && result.get() == ButtonType.OK) {
+            val conn = DatabaseHelper.getConnection()
+            conn.autoCommit = false
+            try {
+                // Ambil data proforma
+                val proformaStmt = conn.prepareStatement("SELECT * FROM proforma WHERE id_proforma = ?")
+                proformaStmt.setInt(1, idProformaBaru)
+                val proformaRs = proformaStmt.executeQuery()
+                
+                if (proformaRs.next()) {
+                    // Insert ke invoice
+                    val invoiceStmt = conn.prepareStatement(
+                        """INSERT INTO invoice (id_perusahaan, id_pelanggan, nomor_invoice, tanggal, dp, tax, total, total_dengan_ppn, contract_ref, contract_date)
+                           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                        Statement.RETURN_GENERATED_KEYS
+                    )
+                    invoiceStmt.setInt(1, proformaRs.getInt("id_perusahaan"))
+                    invoiceStmt.setInt(2, proformaRs.getInt("id_pelanggan"))
+                    
+                    // Generate nomor invoice baru menggunakan data produk pertama
+                    val firstProduct = detailList.firstOrNull()
+                    val nomorInvoice = if (firstProduct != null) {
+                        NomorGenerator.generateNomor(
+                            idPerusahaan,
+                            "invoice",
+                            firstProduct.divisiProperty.get(),
+                            firstProduct.namaProperty.get(),
+                            firstProduct.singkatanProperty.get(),
+                            tanggalPicker.value ?: LocalDate.now()
+                        )
+                    } else {
+                        "INV-" + System.currentTimeMillis()
+                    }
+                    
+                    invoiceStmt.setString(3, nomorInvoice)
+                    invoiceStmt.setString(4, LocalDate.now().toString())
+                    invoiceStmt.setDouble(5, proformaRs.getDouble("dp"))
+                    invoiceStmt.setDouble(6, proformaRs.getDouble("tax"))
+                    invoiceStmt.setDouble(7, proformaRs.getDouble("total"))
+                    invoiceStmt.setDouble(8, proformaRs.getDouble("total_dengan_ppn"))
+                    invoiceStmt.setString(9, proformaRs.getString("contract_ref"))
+                    invoiceStmt.setString(10, proformaRs.getString("contract_date"))
+                    invoiceStmt.executeUpdate()
+                    
+                    val invoiceRs = invoiceStmt.generatedKeys
+                    val idInvoice = if (invoiceRs.next()) invoiceRs.getInt(1) else 0
+                    
+                    // Copy detail proforma ke detail invoice
+                    val detailStmt = conn.prepareStatement(
+                        "SELECT * FROM detail_proforma WHERE id_proforma = ?"
+                    )
+                    detailStmt.setInt(1, idProformaBaru)
+                    val detailRs = detailStmt.executeQuery()
+                    
+                    while (detailRs.next()) {
+                        val insertDetailStmt = conn.prepareStatement(
+                            "INSERT INTO detail_invoice (id_invoice, id_produk, qty, harga, total) VALUES (?, ?, ?, ?, ?)"
+                        )
+                        insertDetailStmt.setInt(1, idInvoice)
+                        insertDetailStmt.setInt(2, detailRs.getInt("id_produk"))
+                        insertDetailStmt.setDouble(3, detailRs.getDouble("qty"))
+                        insertDetailStmt.setDouble(4, detailRs.getDouble("harga"))
+                        insertDetailStmt.setDouble(5, detailRs.getDouble("total"))
+                        insertDetailStmt.executeUpdate()
+                    }
+                    
+                    conn.commit()
+                    showAlert("Sukses", "Proforma berhasil dikonversi menjadi invoice dengan nomor: $nomorInvoice")
+                    (konversiBtn.scene.window as? Stage)?.close()
+                }
+            } catch (e: Exception) {
+                conn.rollback()
+                showAlert("Error", "Gagal mengkonversi proforma: ${e.message}")
+            } finally {
+                conn.close()
+            }
+        }
+    }
+
+    @FXML
+    private fun onHapusProformaClicked() {
+        if (idProformaBaru == 0) {
+            showAlert("Peringatan", "Tidak ada proforma yang dapat dihapus.")
+            return
+        }
+
+        val alert = Alert(Alert.AlertType.CONFIRMATION)
+        alert.title = "Konfirmasi Hapus"
+        alert.headerText = "Hapus Proforma"
+        alert.contentText = "Apakah Anda yakin ingin menghapus proforma ini?"
+        
+        val result = alert.showAndWait()
+        if (result.isPresent && result.get() == ButtonType.OK) {
+            val conn = DatabaseHelper.getConnection()
+            try {
+                conn.prepareStatement("DELETE FROM detail_proforma WHERE id_proforma = ?").apply {
+                    setInt(1, idProformaBaru)
+                    executeUpdate()
+                }
+                conn.prepareStatement("DELETE FROM proforma WHERE id_proforma = ?").apply {
+                    setInt(1, idProformaBaru)
+                    executeUpdate()
+                }
+                showAlert("Sukses", "Proforma berhasil dihapus.")
+                (hapusBtn.scene.window as? Stage)?.close()
+            } catch (e: Exception) {
+                showAlert("Error", "Gagal menghapus proforma: ${e.message}")
+            } finally {
+                conn.close()
+            }
+        }
     }
 }

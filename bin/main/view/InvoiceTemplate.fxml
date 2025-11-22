@@ -11,6 +11,7 @@
 <?import javafx.scene.layout.RowConstraints?>
 <?import javafx.scene.layout.VBox?>
 <?import javafx.scene.text.Font?>
+<?import javafx.scene.image.ImageView?>
 
 <AnchorPane fx:id="templateRoot" prefHeight="842.0" prefWidth="595.0"
     style="-fx-background-color: white;" xmlns="http://javafx.com/javafx/11.0.1"
@@ -21,12 +22,15 @@
             AnchorPane.bottomAnchor="30.0" AnchorPane.leftAnchor="30.0"
             AnchorPane.rightAnchor="30.0" AnchorPane.topAnchor="30.0">
             <children>
-                <Label fx:id="documentTypeLabel" alignment="CENTER" contentDisplay="CENTER"
-                    prefHeight="35.0" prefWidth="547.0" text="INVOICE" textAlignment="CENTER">
-                    <font>
-                        <Font name="System Bold" size="24.0" />
-                    </font>
-                </Label>
+                <HBox alignment="CENTER_LEFT" spacing="15.0">
+                    <ImageView fx:id="logoImageView" fitHeight="60.0" fitWidth="60.0" preserveRatio="true" visible="false"/>
+                    <Label fx:id="documentTypeLabel" alignment="CENTER" contentDisplay="CENTER"
+                        prefHeight="35.0" prefWidth="547.0" text="INVOICE" textAlignment="CENTER">
+                        <font>
+                            <Font name="System Bold" size="24.0" />
+                        </font>
+                    </Label>
+                </HBox>
                 <GridPane>
                     <columnConstraints>
                         <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />

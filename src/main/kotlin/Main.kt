@@ -39,6 +39,10 @@ class MainApp : Application() {
             // 3️⃣ Tampilkan tampilan utama
             val mainLoader = FXMLLoader(javaClass.getResource("/view/MainView.fxml"))
             val mainScene = Scene(mainLoader.load())
+            
+            // Load dashboard data setelah MainView di-load
+            val mainController = mainLoader.getController<controller.MainController>()
+            mainController.setPerusahaanId(idPerusahaanDipilih)
 
             stage.title = "Invoqr"
             stage.scene = mainScene

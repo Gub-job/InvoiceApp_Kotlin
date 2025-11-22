@@ -6,6 +6,8 @@ import javafx.scene.control.TableColumn
 import javafx.scene.control.TableView
 import javafx.scene.control.cell.PropertyValueFactory
 import javafx.scene.layout.AnchorPane
+import javafx.scene.image.Image
+import javafx.scene.image.ImageView
 import model.DocumentData
 import model.ProdukData
 import utils.DatabaseHelper
@@ -13,6 +15,7 @@ import utils.DatabaseHelper
 class InvoiceTemplateController {
 
     @FXML lateinit var templateRoot: AnchorPane
+    @FXML lateinit var logoImageView: ImageView
     @FXML lateinit var documentTypeLabel: Label
     @FXML lateinit var nomorDokumenLabel: Label
     @FXML lateinit var tanggalDokumenLabel: Label
@@ -79,16 +82,31 @@ class InvoiceTemplateController {
     private fun loadOwnerData(idPerusahaan: Int = 1) {
         try {
             val conn = DatabaseHelper.getConnection()
-            val stmt = conn.prepareStatement("SELECT nama, nama_pemilik, jabatan_pemilik FROM perusahaan WHERE id = ?")
+            val stmt = conn.prepareStatement("SELECT nama, nama_pemilik, jabatan_pemilik, logo_path FROM perusahaan WHERE id = ?")
             stmt.setInt(1, idPerusahaan)
             val rs = stmt.executeQuery()
             if (rs.next()) {
                 val namaPerusahaan = rs.getString("nama")
                 val namaPemilik = rs.getString("nama_pemilik")
                 val jabatanPemilik = rs.getString("jabatan_pemilik")
+                val logoPath = rs.getString("logo_path")
                 companyNameLabel.text = if (!namaPerusahaan.isNullOrBlank()) namaPerusahaan else "Nama Perusahaan"
                 ownerNameLabel.text = if (!namaPemilik.isNullOrBlank()) namaPemilik else "Nama Pemilik"
                 ownerPositionLabel.text = if (!jabatanPemilik.isNullOrBlank()) jabatanPemilik else "Jabatan"
+                
+                // Load logo
+                if (!logoPath.isNullOrBlank()) {
+                    try {
+                        val logoFile = java.io.File(logoPath)
+                        if (logoFile.exists()) {
+                            val image = Image(logoFile.toURI().toString())
+                            logoImageView.image = image
+                            logoImageView.isVisible = true
+                        }
+                    } catch (e: Exception) {
+                        println("Gagal load logo: ${e.message}")
+                    }
+                }
             } else {
                 companyNameLabel.text = "Nama Perusahaan"
                 ownerNameLabel.text = "Nama Pemilik"

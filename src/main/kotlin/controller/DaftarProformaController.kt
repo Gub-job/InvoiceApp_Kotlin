@@ -45,7 +45,15 @@ class DaftarProformaController {
     fun initialize() {
         proformaTable.items = proformaList
         
-        kolomId.setCellValueFactory { it.value.idProperty.asObject() }
+        // Ubah kolom ID menjadi nomor urut
+        kolomId.setCellFactory {
+            object : TableCell<ProformaData, Int>() {
+                override fun updateItem(item: Int?, empty: Boolean) {
+                    super.updateItem(item, empty)
+                    text = if (empty) null else (index + 1).toString()
+                }
+            }
+        }
         kolomNomor.setCellValueFactory { it.value.nomorProperty }
         kolomTanggal.setCellValueFactory { it.value.tanggalProperty }
         kolomPelanggan.setCellValueFactory { it.value.pelangganProperty }
@@ -123,7 +131,17 @@ class DaftarProformaController {
             val controller = loader.getController<ProformaController>()
             controller.setIdPerusahaan(idPerusahaan)
             
-            mainController?.showScreen(view)
+            val editStage = Stage()
+            editStage.title = "Buat Proforma Baru"
+            editStage.initModality(Modality.APPLICATION_MODAL)
+            editStage.initOwner(proformaTable.scene.window)
+            
+            val scene = Scene(view)
+            editStage.scene = scene
+            editStage.isResizable = false
+
+            editStage.showAndWait()
+            loadProformaList()
         } catch (e: Exception) {
             e.printStackTrace()
             showAlert("Error", "Gagal membuka form proforma: ${e.message}")

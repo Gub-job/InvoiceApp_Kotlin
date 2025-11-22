@@ -108,11 +108,12 @@
             <Insets top="10" right="10" bottom="10" left="10" />
         </padding>
         <Button fx:id="tambahBtn" text="Tambah Barang" />
-        <Button fx:id="hapusBtn" text="Hapus Barang" /> <!-- Tombol ini untuk menghapus item di tabel -->
+        <Button fx:id="hapusItemBtn" text="Hapus Item" />
         <Button fx:id="simpanBtn" text="Simpan" />
+        <Button fx:id="cloneBtn" onAction="#onCloneProformaClicked" text="Clone" disable="true" style="-fx-background-color: #8b5cf6; -fx-text-fill: white;" />
+        <Button fx:id="konversiBtn" onAction="#onKonversiKeInvoiceClicked" text="Konversi ke Invoice" disable="true" style="-fx-background-color: #f59e0b; -fx-text-fill: white;" />
         <Button fx:id="cetakBtn" text="Cetak" />
-        <Button fx:id="hapusProformaBtn" text="Hapus Proforma" disable="true" /> <!-- Tombol ini
-        untuk menghapus seluruh dokumen, fx:id diubah -->
+        <Button fx:id="hapusBtn" onAction="#onHapusProformaClicked" text="Hapus Proforma" disable="true" />
     </HBox>
 
 </VBox>

@@ -89,13 +89,17 @@ class DaftarPiutangController {
             
             val queryBuilder = StringBuilder("""
                 SELECT 
-                    i.tanggal, i.nomor_invoice, pel.nama as pelanggan, 
+                    i.id_invoice, i.tanggal, i.nomor_invoice, pel.nama as pelanggan, 
                     i.total_dengan_ppn as total, 
-                    COALESCE(SUM(p.jumlah), 0) as dibayar,
-                    (i.total_dengan_ppn - COALESCE(SUM(p.jumlah), 0)) as sisa
+                    COALESCE(pembayaran_total.total_dibayar, 0) as dibayar,
+                    (i.total_dengan_ppn - COALESCE(pembayaran_total.total_dibayar, 0)) as sisa
                 FROM invoice i
                 JOIN pelanggan pel ON i.id_pelanggan = pel.id
-                LEFT JOIN pembayaran p ON i.id_invoice = p.id_invoice
+                LEFT JOIN (
+                    SELECT id_invoice, SUM(jumlah) as total_dibayar
+                    FROM pembayaran
+                    GROUP BY id_invoice
+                ) pembayaran_total ON i.id_invoice = pembayaran_total.id_invoice
                 WHERE i.id_perusahaan = ? AND i.tanggal BETWEEN ? AND ?
             """)
             
@@ -103,7 +107,7 @@ class DaftarPiutangController {
                 queryBuilder.append(" AND i.id_pelanggan = ?")
             }
             
-            queryBuilder.append(" GROUP BY i.id_invoice, i.tanggal, i.nomor_invoice, pel.nama, i.total_dengan_ppn")
+            // Tidak perlu GROUP BY lagi karena sudah menggunakan subquery
             
             when (selectedStatus) {
                 "Belum Lunas" -> queryBuilder.append(" HAVING sisa > 0")
@@ -132,13 +136,17 @@ class DaftarPiutangController {
                 val status = if (sisa == 0.0) "Lunas" else "Belum Lunas"
                 
                 piutangList.add(PiutangData(
+                    rs.getInt("id_invoice"),
                     LocalDate.parse(rs.getString("tanggal")).format(formatter),
                     rs.getString("nomor_invoice"),
                     rs.getString("pelanggan"),
                     String.format("%,.2f", total),
                     String.format("%,.2f", dibayar),
                     String.format("%,.2f", sisa),
-                    status
+                    status,
+                    total,
+                    dibayar,
+                    sisa
                 ))
                 
                 if (sisa > 0) totalPiutang += sisa
@@ -258,32 +266,14 @@ class DaftarPiutangController {
             val root = loader.load<javafx.scene.Parent>()
             val controller = loader.getController<InputPembayaranController>()
             
-            // Parse data dari label
-            val total = piutang.totalProperty.get().replace(",", "").toDoubleOrNull() ?: 0.0
-            val dibayar = piutang.dibayarProperty.get().replace(",", "").toDoubleOrNull() ?: 0.0
-            val sisa = piutang.sisaProperty.get().replace(",", "").toDoubleOrNull() ?: 0.0
-            
-            // Ambil id_invoice dari database
-            val conn = DatabaseHelper.getConnection()
-            var idInvoice = 0
-            try {
-                val stmt = conn.prepareStatement("SELECT id_invoice FROM invoice WHERE nomor_invoice = ?")
-                stmt.setString(1, piutang.nomorProperty.get())
-                val rs = stmt.executeQuery()
-                if (rs.next()) {
-                    idInvoice = rs.getInt("id_invoice")
-                }
-            } finally {
-                conn.close()
-            }
-            
+            // Gunakan data asli dari database yang sudah disimpan di PiutangData
             controller.setInvoiceData(
-                idInvoice,
+                piutang.idInvoice,
                 piutang.nomorProperty.get(),
                 piutang.pelangganProperty.get(),
-                total,
-                dibayar,
-                sisa
+                piutang.totalAsli,
+                piutang.dibayarAsli,
+                piutang.sisaAsli
             )
             controller.setOnSaveCallback { loadPiutang() }
             

@@ -4,6 +4,7 @@
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 <?import javafx.scene.text.Font?>
+<?import javafx.scene.image.ImageView?>
 
 <VBox alignment="TOP_CENTER" prefHeight="700.0" prefWidth="1000.0" spacing="10.0"
     style="-fx-background-color: white; -fx-padding: 20;"
@@ -11,11 +12,14 @@
     fx:controller="controller.LaporanCetakController">
     <children>
         <!-- Header Perusahaan -->
-        <VBox alignment="CENTER" spacing="5.0">
-            <Label fx:id="labelNamaPerusahaan" text="NAMA PERUSAHAAN" style="-fx-font-weight: bold; -fx-font-size: 18px;"/>
-            <Label fx:id="labelAlamatPerusahaan" text="Alamat Perusahaan"/>
-            <Label fx:id="labelKontakPerusahaan" text="Telp: - | Email: -"/>
-        </VBox>
+        <HBox alignment="CENTER_LEFT" spacing="15.0">
+            <ImageView fx:id="logoImageView" fitHeight="60.0" fitWidth="60.0" preserveRatio="true" visible="false"/>
+            <VBox alignment="CENTER_LEFT" spacing="5.0">
+                <Label fx:id="labelNamaPerusahaan" text="NAMA PERUSAHAAN" style="-fx-font-weight: bold; -fx-font-size: 18px;"/>
+                <Label fx:id="labelAlamatPerusahaan" text="Alamat Perusahaan"/>
+                <Label fx:id="labelKontakPerusahaan" text="Telp: - | Email: -"/>
+            </VBox>
+        </HBox>
         
         <Separator/>
         
@@ -46,6 +50,8 @@
                 <TableColumn fx:id="kolomQty" prefWidth="80.0" text="Qty"/>
                 <TableColumn fx:id="kolomHarga" prefWidth="120.0" text="Harga"/>
                 <TableColumn fx:id="kolomTotal" prefWidth="120.0" text="Total"/>
+                <TableColumn fx:id="kolomPpn" prefWidth="100.0" text="PPN"/>
+                <TableColumn fx:id="kolomTotalPpn" prefWidth="120.0" text="Total+PPN"/>
             </columns>
         </TableView>
         

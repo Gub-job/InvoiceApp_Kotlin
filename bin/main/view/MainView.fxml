@@ -1,103 +1,157 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
+<?import javafx.geometry.Insets?>
 <?import javafx.scene.control.Button?>
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.Menu?>
 <?import javafx.scene.control.MenuBar?>
 <?import javafx.scene.control.MenuItem?>
+<?import javafx.scene.control.ScrollPane?>
 <?import javafx.scene.layout.BorderPane?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.Region?>
 <?import javafx.scene.layout.VBox?>
+<?import javafx.scene.chart.LineChart?>
+<?import javafx.scene.chart.NumberAxis?>
+<?import javafx.scene.chart.CategoryAxis?>
 
-<BorderPane fx:id="mainPane" prefHeight="500.0" prefWidth="800.0"
-    style="-fx-background-color: linear-gradient(to bottom, #f8fafc, #e2e8f0);"
-    xmlns="http://javafx.com/javafx/25" xmlns:fx="http://javafx.com/fxml/1"
+<BorderPane fx:id="mainPane" prefHeight="700.0" prefWidth="1200.0"
+    style="-fx-background-color: #f8fafc;"
+    xmlns="http://javafx.com/javafx/11" xmlns:fx="http://javafx.com/fxml/1"
     fx:controller="controller.MainController">
 
     <!-- ===================== HEADER ===================== -->
     <top>
-        <!-- Menu Bar + Tombol dalam satu baris -->
         <HBox alignment="CENTER_LEFT" spacing="0"
-            style="-fx-background-color: #ffffff;-fx-border-color: #e2e8f0;-fx-border-width: 0 0 2 0;-fx-padding: 4 20;-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.08), 5, 0, 0, 2);">
+            style="-fx-background-color: #ffffff;-fx-border-color: #e2e8f0;-fx-border-width: 0 0 1 0;-fx-padding: 8 20;">
 
-            <!-- Menu Bar -->
-            <MenuBar
-                style="-fx-background-color: transparent;-fx-padding: 0;">
-
-                <Menu
-                    style="-fx-text-fill: #1e293b;-fx-font-size: 14px;-fx-font-weight: bold;"
-                    text="📊 Data">
+            <MenuBar style="-fx-background-color: transparent;">
+                <Menu text="📊 Data" style="-fx-font-size: 13px;-fx-font-weight: bold;">
                     <MenuItem onAction="#bukaPelanggan" text="Pelanggan" />
                     <MenuItem onAction="#bukaProduk" text="Produk" />
                     <MenuItem onAction="#bukaPerusahaan" text="Perusahaan" />
                 </Menu>
 
-                <Menu
-                    style="-fx-text-fill: #1e293b;-fx-font-size: 14px;-fx-font-weight: bold;"
-                    text="💳 Transaksi">
+                <Menu text="💳 Transaksi" style="-fx-font-size: 13px;-fx-font-weight: bold;">
                     <MenuItem onAction="#bukaInputPenjualan" text="Input Penjualan" />
                     <MenuItem onAction="#bukaDaftarProforma" text="Daftar Proforma" />
                     <MenuItem onAction="#bukaDaftarInvoice" text="Daftar Invoice" />
                     <MenuItem onAction="#bukaDaftarPiutang" text="Daftar Piutang" />
                 </Menu>
 
-                <Menu
-                    style="-fx-text-fill: #1e293b;-fx-font-size: 14px;-fx-font-weight: bold;"
-                    text="📈 Laporan">
-                    <MenuItem onAction="#bukaLaporan" text="Laporan Penjualan" />
+                <Menu text="📈 Laporan" style="-fx-font-size: 13px;-fx-font-weight: bold;">
+                    <MenuItem onAction="#bukaLaporanPenjualan" text="Laporan Penjualan" />
+                    <MenuItem onAction="#bukaLaporanUmurPiutang" text="Laporan Umur Piutang" />
                 </Menu>
             </MenuBar>
 
-            <!-- Spacer untuk mendorong tombol ke kanan -->
             <Region HBox.hgrow="ALWAYS" />
 
-            <!-- Tombol-tombol di kanan -->
-            <HBox alignment="CENTER_RIGHT" spacing="10">
-                <Button onAction="#onKembaliClicked"
-                    style="-fx-background-color: #10b981;-fx-text-fill: white;-fx-font-weight: bold;-fx-font-size: 13px;-fx-background-radius: 8;-fx-padding: 8 16;-fx-cursor: hand;"
-                    text="🏠 Halaman Utama" />
+            <HBox spacing="8">
+                <Button onAction="#onKembaliClicked" text="🏠 Home"
+                    style="-fx-background-color: #10b981;-fx-text-fill: white;-fx-font-weight: bold;-fx-font-size: 12px;-fx-padding: 8 16;-fx-cursor: hand;" />
 
-                <Button onAction="#bukaPengaturan"
-                    style="-fx-background-color: #3b82f6;-fx-text-fill: white;-fx-font-weight: bold;-fx-font-size: 13px;-fx-background-radius: 8;-fx-padding: 8 16;-fx-cursor: hand;"
-                    text="⚙ Pengaturan" />
+                <Button onAction="#bukaPengaturan" text="⚙ Pengaturan"
+                    style="-fx-background-color: #3b82f6;-fx-text-fill: white;-fx-font-weight: bold;-fx-font-size: 12px;-fx-padding: 8 16;-fx-cursor: hand;" />
 
-                <Button onAction="#onGantiPerusahaanClicked"
-                    style="-fx-background-color: #f59e0b;-fx-text-fill: white;-fx-font-weight: bold;-fx-font-size: 13px;-fx-background-radius: 8;-fx-padding: 8 16;-fx-cursor: hand;"
-                    text="🔄 Ganti Perusahaan" />
+                <Button onAction="#onGantiPerusahaanClicked" text="🔄 Ganti Perusahaan"
+                    style="-fx-background-color: #f59e0b;-fx-text-fill: white;-fx-font-weight: bold;-fx-font-size: 12px;-fx-padding: 8 16;-fx-cursor: hand;" />
             </HBox>
         </HBox>
     </top>
 
     <!-- ===================== CONTENT ===================== -->
     <center>
-        <VBox alignment="CENTER" spacing="30" style="-fx-padding: 80;">
+        <ScrollPane fitToWidth="true" style="-fx-background: #f8fafc;-fx-background-color: #f8fafc;">
+            <VBox spacing="15" style="-fx-padding: 20;">
 
-            <!-- Welcome Title -->
-            <Label
-                style="-fx-font-size: 42px;-fx-font-weight: bold;-fx-text-fill: #0f172a;-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 5, 0, 0, 2);"
-                text="Selamat Datang di Invoqr" />
+                <!-- Welcome Section -->
+                <VBox spacing="5">
+                    <Label text="Dashboard" style="-fx-font-size: 28px;-fx-font-weight: bold;-fx-text-fill: #0f172a;" />
+                    <Label fx:id="welcomeLabel" text="Ringkasan data perusahaan Anda" style="-fx-font-size: 13px;-fx-text-fill: #64748b;" />
+                </VBox>
 
-            <!-- Subtitle -->
-            <Label
-                style="-fx-font-size: 17px;-fx-text-fill: #64748b;-fx-font-weight: 500;"
-                text="Sistem Manajemen Penjualan Modern dan Terintegrasi" />
+                <!-- Statistics Cards -->
+                <HBox spacing="12">
+                    <!-- Card 1: Total Invoice -->
+                    <VBox spacing="8" HBox.hgrow="ALWAYS"
+                        style="-fx-background-color: white;-fx-padding: 18;-fx-border-color: #e2e8f0;-fx-border-width: 1;">
+                        <Label text="📄 Invoice Tahun Ini" style="-fx-font-size: 12px;-fx-text-fill: #64748b;-fx-font-weight: 600;" />
+                        <Label fx:id="totalInvoiceLabel" text="0" style="-fx-font-size: 24px;-fx-font-weight: bold;-fx-text-fill: #3b82f6;" />
+                        <Label fx:id="totalInvoiceAmountLabel" text="Rp 0" style="-fx-font-size: 11px;-fx-text-fill: #94a3b8;" />
+                    </VBox>
 
-            <!-- Info Text -->
-            <Label
-                style="-fx-font-size: 15px;-fx-text-fill: #94a3b8;-fx-font-style: italic;"
-                text="Pilih menu di atas untuk memulai" />
-        </VBox>
+                    <!-- Card 2: Total Proforma -->
+                    <VBox spacing="8" HBox.hgrow="ALWAYS"
+                        style="-fx-background-color: white;-fx-padding: 18;-fx-border-color: #e2e8f0;-fx-border-width: 1;">
+                        <Label text="📋 Proforma Tahun Ini" style="-fx-font-size: 12px;-fx-text-fill: #64748b;-fx-font-weight: 600;" />
+                        <Label fx:id="totalProformaLabel" text="0" style="-fx-font-size: 24px;-fx-font-weight: bold;-fx-text-fill: #8b5cf6;" />
+                        <Label fx:id="totalProformaAmountLabel" text="Rp 0" style="-fx-font-size: 11px;-fx-text-fill: #94a3b8;" />
+                    </VBox>
+
+                    <!-- Card 3: Total Piutang -->
+                    <VBox spacing="8" HBox.hgrow="ALWAYS"
+                        style="-fx-background-color: white;-fx-padding: 18;-fx-border-color: #e2e8f0;-fx-border-width: 1;">
+                        <Label text="💰 Total Piutang" style="-fx-font-size: 12px;-fx-text-fill: #64748b;-fx-font-weight: 600;" />
+                        <Label fx:id="totalPiutangLabel" text="Rp 0" style="-fx-font-size: 24px;-fx-font-weight: bold;-fx-text-fill: #f59e0b;" />
+                        <Label fx:id="piutangBelumLunasLabel" text="0 belum lunas" style="-fx-font-size: 11px;-fx-text-fill: #94a3b8;" />
+                    </VBox>
+
+                    <!-- Card 4: Total Pembayaran -->
+                    <VBox spacing="8" HBox.hgrow="ALWAYS"
+                        style="-fx-background-color: white;-fx-padding: 18;-fx-border-color: #e2e8f0;-fx-border-width: 1;">
+                        <Label text="💵 Pembayaran Diterima" style="-fx-font-size: 12px;-fx-text-fill: #64748b;-fx-font-weight: 600;" />
+                        <Label fx:id="totalPelangganLabel" text="Rp 0" style="-fx-font-size: 24px;-fx-font-weight: bold;-fx-text-fill: #10b981;" />
+                        <Label fx:id="totalProdukLabel" text="0 invoice" style="-fx-font-size: 11px;-fx-text-fill: #94a3b8;" />
+                    </VBox>
+                </HBox>
+
+                <!-- Recent Activity Section -->
+                <VBox spacing="12" style="-fx-background-color: white;-fx-padding: 20;-fx-border-color: #e2e8f0;-fx-border-width: 1;">
+                    <Label text="📊 Ringkasan Bulan Ini" style="-fx-font-size: 15px;-fx-font-weight: bold;-fx-text-fill: #0f172a;" />
+                    
+                    <HBox spacing="30">
+                        <VBox spacing="4">
+                            <Label text="Invoice Bulan Ini" style="-fx-font-size: 11px;-fx-text-fill: #64748b;" />
+                            <Label fx:id="invoiceBulanIniLabel" text="0 invoice" style="-fx-font-size: 16px;-fx-font-weight: bold;-fx-text-fill: #3b82f6;" />
+                        </VBox>
+                        <VBox spacing="4">
+                            <Label text="Proforma Bulan Ini" style="-fx-font-size: 11px;-fx-text-fill: #64748b;" />
+                            <Label fx:id="proformaBulanIniLabel" text="0 proforma" style="-fx-font-size: 16px;-fx-font-weight: bold;-fx-text-fill: #8b5cf6;" />
+                        </VBox>
+                        <VBox spacing="4">
+                            <Label text="Pembayaran Bulan Ini" style="-fx-font-size: 11px;-fx-text-fill: #64748b;" />
+                            <Label fx:id="pembayaranBulanIniLabel" text="Rp 0" style="-fx-font-size: 16px;-fx-font-weight: bold;-fx-text-fill: #10b981;" />
+                        </VBox>
+                    </HBox>
+                </VBox>
+
+                <!-- Sales Chart Section -->
+                <VBox spacing="12" style="-fx-background-color: white;-fx-padding: 20;-fx-border-color: #e2e8f0;-fx-border-width: 1;">
+                    <Label text="📈 Grafik Penjualan (1 Tahun Terakhir)" style="-fx-font-size: 15px;-fx-font-weight: bold;-fx-text-fill: #0f172a;" />
+                    
+                    <LineChart fx:id="salesChart" prefHeight="350" minHeight="350" 
+                               legendVisible="false" animated="false" createSymbols="true">
+                        <xAxis>
+                            <CategoryAxis side="BOTTOM" label="Periode" animated="false" />
+                        </xAxis>
+                        <yAxis>
+                            <NumberAxis side="LEFT" label="Total Penjualan (Rp)" 
+                                       animated="false" autoRanging="true" 
+                                       forceZeroInRange="true" tickLabelFormatter="$null" />
+                        </yAxis>
+                    </LineChart>
+                </VBox>
+            </VBox>
+        </ScrollPane>
     </center>
 
     <!-- ===================== FOOTER ===================== -->
     <bottom>
         <HBox alignment="CENTER"
-            style="-fx-background-color: #ffffff;-fx-padding: 14 20;-fx-border-color: #e2e8f0;-fx-border-width: 1 0 0 0;">
-
-            <Label
-                style="-fx-font-size: 13px;fx-text-fill: #64748b;-fx-font-weight: 500;"
-                text="© 2025 Invoqr App•Sistem Manajemen Penjualan" />
+            style="-fx-background-color: #ffffff;-fx-padding: 12 20;-fx-border-color: #e2e8f0;-fx-border-width: 1 0 0 0;">
+            <Label text="© 2025 Invoqr App • Sistem Manajemen Penjualan" 
+                   style="-fx-font-size: 12px;-fx-text-fill: #64748b;" />
         </HBox>
     </bottom>
 

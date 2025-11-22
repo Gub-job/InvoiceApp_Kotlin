@@ -120,11 +120,8 @@ class InputPembayaranController {
             
             showAlert(Alert.AlertType.INFORMATION, "Sukses", "Pembayaran berhasil disimpan!")
             
-            // Update tampilan
-            sudahDibayar += jumlahBayar
-            sisaPiutang -= jumlahBayar
-            sudahDibayarLabel.text = String.format("Rp %,.2f", sudahDibayar)
-            sisaPiutangLabel.text = String.format("Rp %,.2f", sisaPiutang)
+            // Update tampilan dengan data terbaru dari database
+            updateDataFromDatabase()
             
             // Reset form
             jumlahBayarField.clear()
@@ -180,6 +177,37 @@ class InputPembayaranController {
     private fun showValidation(message: String) {
         validasiLabel.text = message
         validasiLabel.isVisible = true
+    }
+
+    private fun updateDataFromDatabase() {
+        val conn = DatabaseHelper.getConnection()
+        try {
+            val stmt = conn.prepareStatement("""
+                SELECT 
+                    i.total_dengan_ppn as total,
+                    COALESCE(SUM(p.jumlah), 0) as dibayar,
+                    (i.total_dengan_ppn - COALESCE(SUM(p.jumlah), 0)) as sisa
+                FROM invoice i
+                LEFT JOIN pembayaran p ON i.id_invoice = p.id_invoice
+                WHERE i.id_invoice = ?
+                GROUP BY i.id_invoice, i.total_dengan_ppn
+            """)
+            stmt.setInt(1, idInvoice)
+            val rs = stmt.executeQuery()
+            
+            if (rs.next()) {
+                totalInvoice = rs.getDouble("total")
+                sudahDibayar = rs.getDouble("dibayar")
+                sisaPiutang = rs.getDouble("sisa")
+                
+                sudahDibayarLabel.text = String.format("Rp %,.2f", sudahDibayar)
+                sisaPiutangLabel.text = String.format("Rp %,.2f", sisaPiutang)
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        } finally {
+            conn.close()
+        }
     }
 
     private fun showAlert(type: Alert.AlertType, title: String, message: String) {

@@ -3,13 +3,17 @@ package model
 import javafx.beans.property.SimpleStringProperty
 
 class PiutangData(
+    val idInvoice: Int,
     tanggal: String,
     nomor: String,
     pelanggan: String,
     total: String,
     dibayar: String,
     sisa: String,
-    status: String
+    status: String,
+    val totalAsli: Double,
+    val dibayarAsli: Double,
+    val sisaAsli: Double
 ) {
     val tanggalProperty = SimpleStringProperty(tanggal)
     val nomorProperty = SimpleStringProperty(nomor)

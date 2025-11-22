@@ -45,7 +45,15 @@ class DaftarInvoiceController {
     fun initialize() {
         invoiceTable.items = invoiceList
 
-        kolomId.setCellValueFactory { it.value.idProperty.asObject() }
+        // Ubah kolom ID menjadi nomor urut
+        kolomId.setCellFactory {
+            object : TableCell<InvoiceData, Int>() {
+                override fun updateItem(item: Int?, empty: Boolean) {
+                    super.updateItem(item, empty)
+                    text = if (empty) null else (index + 1).toString()
+                }
+            }
+        }
         kolomNomor.setCellValueFactory { it.value.nomorProperty }
         kolomTanggal.setCellValueFactory { it.value.tanggalProperty }
         kolomPelanggan.setCellValueFactory { it.value.pelangganProperty }
@@ -116,8 +124,17 @@ class DaftarInvoiceController {
             val controller = loader.getController<InvoiceController>()
             controller.setIdPerusahaan(idPerusahaan)
 
-            // Tampilkan di main pane
-            mainController?.showScreen(view)
+            val editStage = Stage()
+            editStage.title = "Buat Invoice Baru"
+            editStage.initModality(Modality.APPLICATION_MODAL)
+            editStage.initOwner(invoiceTable.scene.window)
+            
+            val scene = Scene(view)
+            editStage.scene = scene
+            editStage.isResizable = false
+
+            editStage.showAndWait()
+            loadInvoiceList()
         } catch (e: Exception) {
             showAlert("Error", "Gagal membuka form invoice: ${e.message}")
         }

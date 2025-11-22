@@ -5,6 +5,8 @@ import javafx.fxml.FXML
 import javafx.print.PrinterJob
 import javafx.scene.Node
 import javafx.scene.control.*
+import javafx.scene.image.Image
+import javafx.scene.image.ImageView
 import javafx.stage.FileChooser
 import javafx.stage.Stage
 import model.LaporanData
@@ -21,6 +23,7 @@ import java.util.Locale
 
 class LaporanCetakController {
     
+    @FXML private lateinit var logoImageView: ImageView
     @FXML private lateinit var labelNamaPerusahaan: Label
     @FXML private lateinit var labelAlamatPerusahaan: Label
     @FXML private lateinit var labelKontakPerusahaan: Label
@@ -98,6 +101,20 @@ class LaporanCetakController {
                 labelKontakPerusahaan.text = "Telp: $telepon"
                 namaAdminPerusahaan = rs.getString("nama_admin") ?: "Admin"
                 logoPath = rs.getString("logo_path")
+                
+                // Load logo jika ada
+                if (!logoPath.isNullOrBlank()) {
+                    try {
+                        val logoFile = java.io.File(logoPath)
+                        if (logoFile.exists()) {
+                            val image = Image(logoFile.toURI().toString())
+                            logoImageView.image = image
+                            logoImageView.isVisible = true
+                        }
+                    } catch (e: Exception) {
+                        println("Gagal load logo: ${e.message}")
+                    }
+                }
             }
         } catch (e: Exception) {
             e.printStackTrace()
@@ -133,17 +150,38 @@ class LaporanCetakController {
                 val sheet = workbook.createSheet("Laporan Penjualan")
                 
                 // Create styles
-                val boldFont = workbook.createFont().apply { bold = true }
-                val titleFont = workbook.createFont().apply { bold = true; fontHeightInPoints = 16 }
-                val headerFont = workbook.createFont().apply { bold = true; fontHeightInPoints = 12 }
+                val boldFont = workbook.createFont().apply { 
+                    bold = true 
+                    fontHeightInPoints = 11
+                }
+                val titleFont = workbook.createFont().apply { 
+                    bold = true
+                    fontHeightInPoints = 14
+                }
+                val headerFont = workbook.createFont().apply { 
+                    bold = true
+                    fontHeightInPoints = 11
+                }
+                
+                val companyNameStyle = workbook.createCellStyle().apply {
+                    setFont(boldFont)
+                    verticalAlignment = VerticalAlignment.TOP
+                }
+                
+                val companyInfoStyle = workbook.createCellStyle().apply {
+                    verticalAlignment = VerticalAlignment.TOP
+                }
                 
                 val titleStyle = workbook.createCellStyle().apply {
                     setFont(titleFont)
                     alignment = HorizontalAlignment.CENTER
+                    verticalAlignment = VerticalAlignment.CENTER
                 }
+                
                 val headerStyle = workbook.createCellStyle().apply {
                     setFont(headerFont)
                     alignment = HorizontalAlignment.CENTER
+                    verticalAlignment = VerticalAlignment.CENTER
                     setBorderTop(BorderStyle.THIN)
                     setBorderBottom(BorderStyle.THIN)
                     setBorderLeft(BorderStyle.THIN)
@@ -151,69 +189,145 @@ class LaporanCetakController {
                     fillForegroundColor = IndexedColors.GREY_25_PERCENT.index
                     fillPattern = FillPatternType.SOLID_FOREGROUND
                 }
+                
                 val dataStyle = workbook.createCellStyle().apply {
                     setBorderTop(BorderStyle.THIN)
                     setBorderBottom(BorderStyle.THIN)
                     setBorderLeft(BorderStyle.THIN)
                     setBorderRight(BorderStyle.THIN)
+                    verticalAlignment = VerticalAlignment.CENTER
                 }
+                
+                val dataCenterStyle = workbook.createCellStyle().apply {
+                    setBorderTop(BorderStyle.THIN)
+                    setBorderBottom(BorderStyle.THIN)
+                    setBorderLeft(BorderStyle.THIN)
+                    setBorderRight(BorderStyle.THIN)
+                    alignment = HorizontalAlignment.CENTER
+                    verticalAlignment = VerticalAlignment.CENTER
+                }
+                
+                val dataRightStyle = workbook.createCellStyle().apply {
+                    setBorderTop(BorderStyle.THIN)
+                    setBorderBottom(BorderStyle.THIN)
+                    setBorderLeft(BorderStyle.THIN)
+                    setBorderRight(BorderStyle.THIN)
+                    alignment = HorizontalAlignment.RIGHT
+                    verticalAlignment = VerticalAlignment.CENTER
+                }
+                
                 val boldStyle = workbook.createCellStyle().apply {
                     setFont(boldFont)
+                }
+                
+                val infoLabelStyle = workbook.createCellStyle().apply {
+                    setFont(boldFont)
+                    verticalAlignment = VerticalAlignment.TOP
+                }
+                
+                val totalLabelStyle = workbook.createCellStyle().apply {
+                    setFont(boldFont)
+                    alignment = HorizontalAlignment.RIGHT
+                }
+                
+                val totalValueStyle = workbook.createCellStyle().apply {
+                    setFont(boldFont)
+                    alignment = HorizontalAlignment.RIGHT
                 }
                 
                 var currentRow = 0
                 
                 // Sisipkan logo jika ada
-                if (!logoPath.isNullOrBlank() && java.io.File(logoPath!!).exists()) {
-                    try {
-                        val inputStream: java.io.InputStream = FileInputStream(logoPath)
-                        val bytes = IOUtils.toByteArray(inputStream)
-                        val pictureIdx = workbook.addPicture(bytes, Workbook.PICTURE_TYPE_PNG)
-                        inputStream.close()
+                val currentLogoPath = logoPath
+                if (!currentLogoPath.isNullOrBlank()) {
+                    val logoFile = java.io.File(currentLogoPath)
+                    if (logoFile.exists()) {
+                        try {
+                            val inputStream: java.io.InputStream = FileInputStream(currentLogoPath)
+                            val bytes = IOUtils.toByteArray(inputStream)
+                            
+                            val ext = currentLogoPath.substringAfterLast('.', "").lowercase()
+                            val pictureType = when (ext) {
+                                "png" -> Workbook.PICTURE_TYPE_PNG
+                                "jpg", "jpeg" -> Workbook.PICTURE_TYPE_JPEG
+                                else -> Workbook.PICTURE_TYPE_PNG
+                            }
+                            
+                            val pictureIdx = workbook.addPicture(bytes, pictureType)
+                            inputStream.close()
 
-                        val drawing = sheet.createDrawingPatriarch()
-                        val anchor = workbook.creationHelper.createClientAnchor()
-                        anchor.setCol1(0) // Kolom A
-                        anchor.row1 = 0   // Baris 1
-                        val picture = drawing.createPicture(anchor, pictureIdx)
-                        picture.resize(1.0, 3.0) // Resize gambar agar sesuai dengan 1 kolom dan 3 baris
-                    } catch (e: Exception) {
-                        println("Gagal memuat logo: ${e.message}")
+                            val drawing = sheet.createDrawingPatriarch()
+                            val anchor = workbook.creationHelper.createClientAnchor()
+                            anchor.setCol1(0)
+                            anchor.setRow1(0)
+                            anchor.setCol2(1)
+                            anchor.setRow2(3)
+                            drawing.createPicture(anchor, pictureIdx)
+                        } catch (e: Exception) {
+                            println("ERROR: Gagal memuat logo ke Excel: ${e.message}")
+                        }
                     }
                 }
                 
-                // Header perusahaan (kolom C-E)
-                sheet.createRow(currentRow++).createCell(2).apply {
-                    setCellValue(labelNamaPerusahaan.text)
-                    cellStyle = boldStyle
+                // Header perusahaan (di samping logo)
+                sheet.createRow(0).apply {
+                    createCell(1).apply {
+                        setCellValue(labelNamaPerusahaan.text)
+                        cellStyle = companyNameStyle
+                    }
                 }
-                sheet.createRow(currentRow++).createCell(2).setCellValue(labelAlamatPerusahaan.text)
-                sheet.createRow(currentRow++).createCell(2).setCellValue(labelKontakPerusahaan.text)
-                currentRow++ // Empty row
+                sheet.createRow(1).apply {
+                    createCell(1).apply {
+                        setCellValue(labelAlamatPerusahaan.text)
+                        cellStyle = companyInfoStyle
+                    }
+                }
+                sheet.createRow(2).apply {
+                    createCell(1).apply {
+                        setCellValue(labelKontakPerusahaan.text)
+                        cellStyle = companyInfoStyle
+                    }
+                }
                 
-                // Judul
-                val titleRow = sheet.createRow(currentRow++)
-                val titleCell = titleRow.createCell(2)
-                titleCell.setCellValue("LAPORAN PENJUALAN")
-                titleCell.cellStyle = titleStyle
-                sheet.addMergedRegion(CellRangeAddress(currentRow-1, currentRow-1, 2, 4))
+                currentRow = 3
+                
+                // Separator (garis horizontal)
+                val separatorRow = sheet.createRow(currentRow++)
+                for (i in 0..8) {
+                    separatorRow.createCell(i).cellStyle = workbook.createCellStyle().apply {
+                        setBorderBottom(BorderStyle.THIN)
+                    }
+                }
+                
+                // Judul Laporan
+                sheet.createRow(currentRow++).apply {
+                    createCell(0).apply {
+                        setCellValue("LAPORAN PENJUALAN")
+                        cellStyle = titleStyle
+                    }
+                }
+                sheet.addMergedRegion(CellRangeAddress(currentRow-1, currentRow-1, 0, 8))
+                
                 currentRow++ // Empty row
                 
                 // Info laporan
                 sheet.createRow(currentRow++).apply {
-                    createCell(0).apply { setCellValue("Periode"); cellStyle = boldStyle }
-                    createCell(2).setCellValue(labelPeriode.text)
+                    createCell(0).apply { 
+                        setCellValue("Periode")
+                        cellStyle = infoLabelStyle
+                    }
+                    createCell(1).setCellValue(labelPeriode.text)
                 }
                 sheet.createRow(currentRow++).apply {
-                    createCell(0).apply { setCellValue("Tanggal Cetak"); cellStyle = boldStyle }
-                    createCell(2).setCellValue(labelTanggalCetak.text)
+                    createCell(0).apply { 
+                        setCellValue("Tanggal Cetak")
+                        cellStyle = infoLabelStyle
+                    }
+                    createCell(1).setCellValue(labelTanggalCetak.text)
                 }
-                sheet.createRow(currentRow++).apply {
-                    createCell(0).apply { setCellValue("Dibuat oleh"); cellStyle = boldStyle }
-                    createCell(2).setCellValue(": $namaAdminPerusahaan")
-                }
-                currentRow++ // Empty row
-
+                
+                currentRow++ // Empty row (separator)
+                
                 // Table headers
                 val headerRow = sheet.createRow(currentRow++)
                 val headers = listOf("Tanggal", "Nomor", "Pelanggan", "Produk", "Qty", "Harga", "Total", "PPN", "Total+PPN")
@@ -227,42 +341,47 @@ class LaporanCetakController {
                 // Data
                 laporanList.forEachIndexed { rowIndex, data ->
                     val row = sheet.createRow(currentRow + rowIndex)
-                    row.createCell(0).apply { setCellValue(data.tanggalProperty.get()); cellStyle = dataStyle }
+                    row.createCell(0).apply { setCellValue(data.tanggalProperty.get()); cellStyle = dataCenterStyle }
                     row.createCell(1).apply { setCellValue(data.nomorProperty.get()); cellStyle = dataStyle }
                     row.createCell(2).apply { setCellValue(data.pelangganProperty.get()); cellStyle = dataStyle }
                     row.createCell(3).apply { setCellValue(data.namaProdukProperty.get()); cellStyle = dataStyle }
-                    row.createCell(4).apply { setCellValue(data.qtyProperty.get()); cellStyle = dataStyle }
-                    row.createCell(5).apply { setCellValue(data.hargaProperty.get()); cellStyle = dataStyle }
-                    row.createCell(6).apply { setCellValue(data.totalProperty.get()); cellStyle = dataStyle }
-                    row.createCell(7).apply { setCellValue(data.ppnProperty.get()); cellStyle = dataStyle }
-                    row.createCell(8).apply { setCellValue(data.totalDenganPpnProperty.get()); cellStyle = dataStyle }
+                    row.createCell(4).apply { setCellValue(data.qtyProperty.get()); cellStyle = dataRightStyle }
+                    row.createCell(5).apply { setCellValue(data.hargaProperty.get()); cellStyle = dataRightStyle }
+                    row.createCell(6).apply { setCellValue(data.totalProperty.get()); cellStyle = dataRightStyle }
+                    row.createCell(7).apply { setCellValue(data.ppnProperty.get()); cellStyle = dataRightStyle }
+                    row.createCell(8).apply { setCellValue(data.totalDenganPpnProperty.get()); cellStyle = dataRightStyle }
                 }
                 
                 // Total
                 currentRow += laporanList.size
+                currentRow++ // Empty row sebelum total
+                
                 val totalSub = laporanList.sumOf { it.totalProperty.get().replace(".", "").replace(",", ".").toDoubleOrNull() ?: 0.0 }
                 val totalPpn = laporanList.sumOf { it.ppnProperty.get().replace(".", "").replace(",", ".").toDoubleOrNull() ?: 0.0 }
                 val grandTotal = laporanList.sumOf { it.totalDenganPpnProperty.get().replace(".", "").replace(",", ".").toDoubleOrNull() ?: 0.0 }
 
-                sheet.createRow(currentRow++).apply {
-                    createCell(5).apply { setCellValue("SUBTOTAL:"); cellStyle = boldStyle }
-                    createCell(6).apply { setCellValue(String.format(Locale.GERMAN, "%,.2f", totalSub)); cellStyle = boldStyle }
+                // Format angka sesuai dengan format Indonesia (titik sebagai pemisah ribuan)
+                val formatAngka = { nilai: Double ->
+                    String.format(Locale.GERMAN, "%,.2f", nilai).replace(",", ".")
                 }
+
                 sheet.createRow(currentRow++).apply {
-                    createCell(5).apply { setCellValue("TOTAL PPN:"); cellStyle = boldStyle }
-                    createCell(7).apply { setCellValue(String.format(Locale.GERMAN, "%,.2f", totalPpn)); cellStyle = boldStyle }
+                    createCell(6).apply { 
+                        setCellValue("Total: Rp ${formatAngka(totalSub)} | Total PPN: Rp ${formatAngka(totalPpn)}")
+                        cellStyle = totalLabelStyle
+                    }
                 }
-                sheet.createRow(currentRow++).apply {
-                    createCell(5).apply { setCellValue("GRAND TOTAL:"); cellStyle = boldStyle }
-                    createCell(8).apply { setCellValue(String.format(Locale.GERMAN, "%,.2f", grandTotal)); cellStyle = boldStyle }
-                }
+                sheet.addMergedRegion(CellRangeAddress(currentRow-1, currentRow-1, 6, 8))
                 
                 // Auto-size columns
                 for (i in 0..8) {
                     sheet.autoSizeColumn(i)
+                    // Tambahkan sedikit padding
+                    val currentWidth = sheet.getColumnWidth(i)
+                    sheet.setColumnWidth(i, (currentWidth * 1.1).toInt())
                 }
                 
-                // Set column width for logo
+                // Set minimum width untuk kolom logo
                 sheet.setColumnWidth(0, 3000)
 
                 FileOutputStream(file).use {

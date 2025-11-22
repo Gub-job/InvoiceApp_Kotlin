@@ -64,13 +64,14 @@ object NomorGenerator {
                 val firstDayOfMonth = LocalDate.of(year, month, 1).toString()
                 val lastDayOfMonth = YearMonth.of(year, month).atEndOfMonth().toString()
 
-                val dateColumn = if (tipe == "invoice") "tanggal_invoice" else "tanggal_proforma"
+                val dateColumn = if (tipe == "invoice") "tanggal" else "tanggal_proforma"
                 val countStmt = conn.prepareStatement(
-                    "SELECT COUNT(*) FROM $tipe WHERE id_perusahaan = ? AND $dateColumn BETWEEN ? AND ?"
+                    "SELECT COUNT(*) FROM $tipe WHERE id_perusahaan = ? AND $dateColumn BETWEEN ? AND ? AND divisi = ?"
                 )
                 countStmt.setInt(1, idPerusahaan)
                 countStmt.setString(2, firstDayOfMonth)
                 countStmt.setString(3, lastDayOfMonth)
+                countStmt.setString(4, divisi ?: "")
                 val countRs = countStmt.executeQuery()
                 nextNumber = if (countRs.next()) countRs.getInt(1) + 1 else 1
                 countStmt.close()
@@ -88,6 +89,8 @@ object NomorGenerator {
             println("Divisi: '$divisi'")
             println("Produk: '$produk'")
             println("Singkatan produk: '$singkatanProduk'")
+            println("Tanggal: $targetDate (Bulan: $month, Tahun: $year)")
+            println("Next Number: $nextNumber")
             
             // 3. Ganti placeholder di format string
             var result = formatString

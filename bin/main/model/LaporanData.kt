@@ -2,20 +2,24 @@ package model
 
 import javafx.beans.property.SimpleStringProperty
 
-data class LaporanData(
-    val tanggalValue: String,
-    val nomorValue: String,
-    val pelangganValue: String,
-    val namaProdukValue: String,
-    val qtyValue: String,
-    val hargaValue: String,
-    val totalValue: String
+class LaporanData(
+    tanggal: String,
+    nomor: String,
+    pelanggan: String,
+    namaProduk: String,
+    qty: String,
+    harga: String,
+    total: String,
+    ppn: String = "0.00",
+    totalDenganPpn: String = "0.00"
 ) {
-    val tanggalProperty = SimpleStringProperty(tanggalValue)
-    val nomorProperty = SimpleStringProperty(nomorValue)
-    val pelangganProperty = SimpleStringProperty(pelangganValue)
-    val namaProdukProperty = SimpleStringProperty(namaProdukValue)
-    val qtyProperty = SimpleStringProperty(qtyValue)
-    val hargaProperty = SimpleStringProperty(hargaValue)
-    val totalProperty = SimpleStringProperty(totalValue)
+    val tanggalProperty = SimpleStringProperty(tanggal)
+    val nomorProperty = SimpleStringProperty(nomor)
+    val pelangganProperty = SimpleStringProperty(pelanggan)
+    val namaProdukProperty = SimpleStringProperty(namaProduk)
+    val qtyProperty = SimpleStringProperty(qty)
+    val hargaProperty = SimpleStringProperty(harga)
+    val totalProperty = SimpleStringProperty(total)
+    val ppnProperty = SimpleStringProperty(ppn)
+    val totalDenganPpnProperty = SimpleStringProperty(totalDenganPpn)
 }

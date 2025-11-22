@@ -112,9 +112,11 @@
             <Insets top="10" right="10" bottom="10" left="10" />
         </padding>
         <Button fx:id="tambahBtn" text="Tambah Barang" />
-        <Button fx:id="hapusBtn" text="Hapus Barang" />
+        <Button fx:id="hapusItemBtn" text="Hapus Item" />
         <Button fx:id="simpanBtn" text="Simpan Invoice" />
+        <Button fx:id="cloneBtn" onAction="#onCloneInvoiceClicked" text="Clone" disable="true" style="-fx-background-color: #8b5cf6; -fx-text-fill: white;" />
         <Button fx:id="cetakBtn" text="Cetak" />
+        <Button fx:id="hapusBtn" onAction="#onHapusInvoiceClicked" text="Hapus Invoice" disable="true" />
     </HBox>
 
 </VBox>
