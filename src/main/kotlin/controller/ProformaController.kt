@@ -19,6 +19,8 @@ import utils.NomorGenerator
 import utils.CreateProformaTables
 import java.sql.*
 import java.time.LocalDate
+import java.text.NumberFormat
+import java.util.Locale
 
 class ProformaController {
 
@@ -139,8 +141,8 @@ class ProformaController {
                     id = detailRs.getInt("id_produk"),
                     nama = detailRs.getString("nama_produk"),
                     uom = detailRs.getString("uom"),
-                    qty = String.format("%,.2f", detailRs.getDouble("qty")),
-                    harga = String.format("%,.2f", detailRs.getDouble("harga")),
+                    qty = detailRs.getDouble("qty").toString(), // Load sebagai angka murni
+                    harga = detailRs.getDouble("harga").toString(), // Load sebagai angka murni
                     divisi = detailRs.getString("divisi") ?: "",
                     singkatan = detailRs.getString("singkatan") ?: ""
                 )
@@ -182,84 +184,49 @@ class ProformaController {
         kolomNama.setCellValueFactory { it.value.namaProperty }
         kolomUom.setCellValueFactory { it.value.uomProperty }
         kolomQty.setCellValueFactory { it.value.qtyProperty }
-        kolomHarga.setCellValueFactory { it.value.hargaProperty }
-        kolomTotal.setCellValueFactory { it.value.totalProperty }
 
-        // Custom cell factory untuk Qty dengan Tab support
-        kolomQty.cellFactory = Callback {
+        // Gunakan CellFactory untuk memformat tampilan angka
+        val numberFormat = NumberFormat.getNumberInstance(Locale("id", "ID")).apply {
+            maximumFractionDigits = 0
+        }
+        val currencyFormat = NumberFormat.getCurrencyInstance(Locale("id", "ID")).apply {
+            maximumFractionDigits = 2
+            currency = java.util.Currency.getInstance("IDR")
+        }
+
+        kolomQty.cellFactory = TextFieldTableCell.forTableColumn()
+        kolomHarga.setCellValueFactory { it.value.hargaProperty }
+        kolomHarga.cellFactory = TextFieldTableCell.forTableColumn()
+        kolomHarga.setCellFactory {
             object : TextFieldTableCell<ProdukData, String>() {
-                override fun startEdit() {
-                    super.startEdit()
-                    val tf = graphic as? TextField
-                    tf?.setOnKeyPressed { event ->
-                        val selectedRow = table.selectionModel.selectedIndex
-                        when (event.code) {
-                            javafx.scene.input.KeyCode.TAB, javafx.scene.input.KeyCode.ENTER, javafx.scene.input.KeyCode.RIGHT -> {
-                                commitEdit(tf.text)
-                                event.consume()
-                                javafx.application.Platform.runLater {
-                                    table.edit(selectedRow, kolomHarga)
-                                }
-                            }
-                            javafx.scene.input.KeyCode.LEFT -> {
-                                commitEdit(tf.text)
-                                event.consume()
-                                javafx.application.Platform.runLater {
-                                    table.edit(selectedRow, kolomNama)
-                                }
-                            }
-                            else -> {}
-                        }
-                    }
-                    javafx.application.Platform.runLater { tf?.requestFocus() }
+                override fun updateItem(item: String?, empty: Boolean) {
+                    super.updateItem(item, empty)
+                    text = if (empty || item == null) null else numberFormat.format(item.toDoubleOrNull() ?: 0.0)
                 }
             }
         }
-        
-        // Custom cell factory untuk Harga dengan Tab support
-        kolomHarga.cellFactory = Callback {
-            object : TextFieldTableCell<ProdukData, String>() {
-                override fun startEdit() {
-                    super.startEdit()
-                    val tf = graphic as? TextField
-                    tf?.setOnKeyPressed { event ->
-                        val selectedRow = table.selectionModel.selectedIndex
-                        when (event.code) {
-                            javafx.scene.input.KeyCode.TAB, javafx.scene.input.KeyCode.ENTER, javafx.scene.input.KeyCode.RIGHT -> {
-                                commitEdit(tf.text)
-                                event.consume()
-                                // Pindah ke baris berikutnya
-                                if (selectedRow < detailList.size - 1) {
-                                    javafx.application.Platform.runLater {
-                                        table.selectionModel.select(selectedRow + 1)
-                                        table.edit(selectedRow + 1, kolomNama)
-                                    }
-                                }
-                            }
-                            javafx.scene.input.KeyCode.LEFT -> {
-                                commitEdit(tf.text)
-                                event.consume()
-                                javafx.application.Platform.runLater {
-                                    table.edit(selectedRow, kolomQty)
-                                }
-                            }
-                            else -> {}
-                        }
-                    }
-                    javafx.application.Platform.runLater { tf?.requestFocus() }
+
+        kolomTotal.setCellValueFactory { it.value.totalProperty }
+        kolomTotal.setCellFactory {
+            object : TableCell<ProdukData, String>() {
+                override fun updateItem(item: String?, empty: Boolean) {
+                    super.updateItem(item, empty)
+                    text = if (empty || item == null) null else currencyFormat.format(item.toDoubleOrNull() ?: 0.0)
                 }
             }
         }
-        
+
         // Custom cell factory untuk kolomNama dengan autocomplete smooth
         kolomNama.cellFactory = Callback {
             object : TextFieldTableCell<ProdukData, String>() {
                 override fun startEdit() {
                     super.startEdit()
                     val tf = graphic as? TextField
+                    // Listener untuk memfilter saat user mengetik
                     tf?.textProperty()?.addListener { _, _, newValue ->
                         filterAndShowProdukForCell(newValue, tf)
                     }
+                    // Listener untuk navigasi keyboard
                     tf?.setOnKeyPressed { event ->
                         when (event.code) {
                             javafx.scene.input.KeyCode.DOWN -> {
@@ -305,14 +272,14 @@ class ProformaController {
         }
 
         kolomQty.setOnEditCommit {
-            val value = it.newValue.replace(",", "").toDoubleOrNull() ?: 0.0
-            it.rowValue.qtyProperty.set(String.format("%,.2f", value))
+            val value = it.newValue.replace(",", "")
+            it.rowValue.qtyProperty.set(value) // Simpan sebagai angka murni
             hitungTotalBaris(it.rowValue)
             updateTotals()
         }
         kolomHarga.setOnEditCommit {
-            val value = it.newValue.replace(",", "").toDoubleOrNull() ?: 0.0
-            it.rowValue.hargaProperty.set(String.format("%,.2f", value))
+            val value = it.newValue.replace(",", "")
+            it.rowValue.hargaProperty.set(value) // Simpan sebagai angka murni
             hitungTotalBaris(it.rowValue)
             updateTotals()
         }
@@ -818,12 +785,14 @@ class ProformaController {
 
     private fun hitungTotalBaris(item: ProdukData) {
         try {
-            val qty = item.qtyProperty.get().replace(",", "").toDoubleOrNull() ?: 0.0
-            val harga = item.hargaProperty.get().replace(",", "").toDoubleOrNull() ?: 0.0
+            val qtyText = item.qtyProperty.get().replace(",", "")
+            val hargaText = item.hargaProperty.get().replace(",", "")
+            val qty = qtyText.toDoubleOrNull() ?: 0.0
+            val harga = hargaText.toDoubleOrNull() ?: 0.0
             val total = qty * harga
-            item.totalProperty.set(String.format("%,.2f", total))
+            item.totalProperty.set(total.toString()) // Simpan total sebagai angka murni
         } catch (e: Exception) {
-            item.totalProperty.set("0")
+            item.totalProperty.set("0.0")
         }
         table.refresh()
     }
