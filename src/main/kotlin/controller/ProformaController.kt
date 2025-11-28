@@ -663,6 +663,9 @@ class ProformaController {
         }
 
         try {
+            val grandTotalValue = grandTotalLabel.text.replace(",", "").toDoubleOrNull() ?: 0.0
+            val terbilang = utils.Terbilang.convert(grandTotalValue)
+            
             val data = model.DocumentData(
                 documentType = "PROFORMA INVOICE",
                 nomorDokumen = nomorField.text,
@@ -675,6 +678,7 @@ class ProformaController {
                 dp = dpAmountLabel.text,
                 ppn = ppnAmountLabel.text,
                 grandTotal = grandTotalLabel.text,
+                terbilang = terbilang,
                 contractRef = contractRefField.text,
                 contractDate = contractDatePicker.value?.toString()
             )

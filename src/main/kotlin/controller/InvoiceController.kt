@@ -850,6 +850,9 @@ class InvoiceController {
         }
 
         try {
+            val grandTotalValue = grandTotalLabel.text.replace(",", "").toDoubleOrNull() ?: 0.0
+            val terbilang = utils.Terbilang.convert(grandTotalValue)
+            
             val data = model.DocumentData(
                 documentType = "INVOICE",
                 nomorDokumen = nomorField.text,
@@ -862,6 +865,7 @@ class InvoiceController {
                 dp = dpAmountLabel.text,
                 ppn = ppnAmountLabel.text,
                 grandTotal = grandTotalLabel.text,
+                terbilang = terbilang,
                 contractRef = contractRefField.text,
                 contractDate = contractDatePicker.value?.toString()
             )

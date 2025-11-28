@@ -31,6 +31,7 @@ class InvoiceTemplateController {
     @FXML lateinit var dpLabel: Label
     @FXML lateinit var ppnLabel: Label
     @FXML lateinit var grandTotalLabel: Label
+    @FXML lateinit var terbilangLabel: Label
     @FXML lateinit var companyNameLabel: Label
     @FXML lateinit var ownerNameLabel: Label
     @FXML lateinit var ownerPositionLabel: Label
@@ -38,6 +39,9 @@ class InvoiceTemplateController {
     @FXML lateinit var alamatPerusahaanHeader: Label
     @FXML lateinit var teleponPerusahaanHeader: Label
     @FXML lateinit var hpPerusahaanHeader: Label
+    @FXML lateinit var noRekLabel: Label
+    @FXML lateinit var bankNameLabel: Label
+    @FXML lateinit var bankLocationLabel: Label
 
     // Deklarasikan semua kolom tabel dengan @FXML
     @FXML private lateinit var noCol: TableColumn<ProdukData, String>
@@ -49,6 +53,9 @@ class InvoiceTemplateController {
 
     @FXML
     fun initialize() {
+        // Hilangkan warna selang-seling baris
+        itemsTable.style = "-fx-background-color: white; -fx-control-inner-background: white;"
+        
         // Inisialisasi kolom tabel
         noCol.setCellFactory {
             object : javafx.scene.control.TableCell<ProdukData, String>() {
@@ -59,6 +66,16 @@ class InvoiceTemplateController {
             }
         }
         namaProdukCol.setCellValueFactory { it.value.namaProperty }
+        namaProdukCol.setCellFactory {
+            object : javafx.scene.control.TableCell<ProdukData, String>() {
+                override fun updateItem(item: String?, empty: Boolean) {
+                    super.updateItem(item, empty)
+                    text = item
+                    isWrapText = true
+                }
+            }
+        }
+        
         uomCol.setCellValueFactory { it.value.uomProperty }
         qtyCol.setCellValueFactory { it.value.qtyProperty }
 
@@ -111,6 +128,7 @@ class InvoiceTemplateController {
         dpLabel.text = data.dp
         ppnLabel.text = data.ppn
         grandTotalLabel.text = data.grandTotal
+        terbilangLabel.text = "Terbilang: ${data.terbilang}"
         
         loadOwnerData(idPerusahaan)
     }
@@ -118,7 +136,7 @@ class InvoiceTemplateController {
     private fun loadOwnerData(idPerusahaan: Int = 1) {
         try {
             val conn = DatabaseHelper.getConnection()
-            val stmt = conn.prepareStatement("SELECT nama, alamat, telepon, hp, nama_pemilik, jabatan_pemilik, logo_path FROM perusahaan WHERE id = ?")
+            val stmt = conn.prepareStatement("SELECT nama, alamat, telepon, hp, nama_pemilik, no_rek, nama_bank, lokasi_kantor_bank, jabatan_pemilik, logo_path FROM perusahaan WHERE id = ?")
             stmt.setInt(1, idPerusahaan)
             val rs = stmt.executeQuery()
             if (rs.next()) {
@@ -129,7 +147,10 @@ class InvoiceTemplateController {
                 val namaPemilik = rs.getString("nama_pemilik")
                 val jabatanPemilik = rs.getString("jabatan_pemilik")
                 val logoPath = rs.getString("logo_path")
-                
+                val noRek = rs.getString("no_rek")
+                val namaBank = rs.getString("nama_bank")
+                val lokasiKantorBank = rs.getString("lokasi_kantor_bank")
+
                 // Header perusahaan
                 namaPerusahaanHeader.text = if (!namaPerusahaan.isNullOrBlank()) namaPerusahaan else "Nama Perusahaan"
                 alamatPerusahaanHeader.text = if (!alamat.isNullOrBlank()) alamat else "Alamat Perusahaan"
@@ -140,6 +161,9 @@ class InvoiceTemplateController {
                 companyNameLabel.text = if (!namaPerusahaan.isNullOrBlank()) namaPerusahaan else "Nama Perusahaan"
                 ownerNameLabel.text = if (!namaPemilik.isNullOrBlank()) namaPemilik else "Nama Pemilik"
                 ownerPositionLabel.text = if (!jabatanPemilik.isNullOrBlank()) jabatanPemilik else "Jabatan"
+                noRekLabel.text = if (!noRek.isNullOrBlank()) "IDR ACC NO. $noRek" else "No. Rekening: -"
+                bankNameLabel.text = if (!namaBank.isNullOrBlank()) "$namaBank" else "Bank: -"
+                bankLocationLabel.text = if (!lokasiKantorBank.isNullOrBlank()) "$lokasiKantorBank" else "Cabang: -"
                 
                 // Load logo
                 if (!logoPath.isNullOrBlank()) {

@@ -11,6 +11,8 @@ import javafx.scene.image.ImageView
 import model.DocumentData
 import model.ProdukData
 import utils.DatabaseHelper
+import java.text.NumberFormat
+import java.util.Locale
 
 class InvoiceTemplateController {
 
@@ -29,21 +31,33 @@ class InvoiceTemplateController {
     @FXML lateinit var dpLabel: Label
     @FXML lateinit var ppnLabel: Label
     @FXML lateinit var grandTotalLabel: Label
+    @FXML lateinit var terbilangLabel: Label
     @FXML lateinit var companyNameLabel: Label
     @FXML lateinit var ownerNameLabel: Label
     @FXML lateinit var ownerPositionLabel: Label
+    @FXML lateinit var namaPerusahaanHeader: Label
+    @FXML lateinit var alamatPerusahaanHeader: Label
+    @FXML lateinit var teleponPerusahaanHeader: Label
+    @FXML lateinit var hpPerusahaanHeader: Label
+    @FXML lateinit var noRekLabel: Label
+    @FXML lateinit var bankNameLabel: Label
+    @FXML lateinit var bankLocationLabel: Label
+
+    // Deklarasikan semua kolom tabel dengan @FXML
+    @FXML private lateinit var noCol: TableColumn<ProdukData, String>
+    @FXML private lateinit var namaProdukCol: TableColumn<ProdukData, String>
+    @FXML private lateinit var uomCol: TableColumn<ProdukData, String>
+    @FXML private lateinit var qtyCol: TableColumn<ProdukData, String>
+    @FXML private lateinit var hargaCol: TableColumn<ProdukData, String>
+    @FXML private lateinit var totalCol: TableColumn<ProdukData, String>
 
     @FXML
     fun initialize() {
-        // Definisikan kolom di sini karena beberapa FXML mungkin tidak punya fx:id
-        val noCol = itemsTable.columns.find { it.text == "No" } as? TableColumn<ProdukData, String>
-        val namaProdukCol = itemsTable.columns.find { it.text == "Nama Produk" } as? TableColumn<ProdukData, String>
-        val uomCol = itemsTable.columns.find { it.text == "UOM" } as? TableColumn<ProdukData, String>
-        val qtyCol = itemsTable.columns.find { it.text == "Qty" } as? TableColumn<ProdukData, String>
-        val hargaCol = itemsTable.columns.find { it.text == "Harga" } as? TableColumn<ProdukData, String>
-        val totalCol = itemsTable.columns.find { it.text == "Total" } as? TableColumn<ProdukData, String>
+        // Hilangkan warna selang-seling baris
+        itemsTable.style = "-fx-background-color: white; -fx-control-inner-background: white;"
+        
         // Inisialisasi kolom tabel
-        noCol?.setCellFactory {
+        noCol.setCellFactory {
             object : javafx.scene.control.TableCell<ProdukData, String>() {
                 override fun updateItem(item: String?, empty: Boolean) {
                     super.updateItem(item, empty)
@@ -51,30 +65,70 @@ class InvoiceTemplateController {
                 }
             }
         }
-        namaProdukCol?.setCellValueFactory { it.value.namaProperty }
-        uomCol?.setCellValueFactory { it.value.uomProperty }
-        qtyCol?.setCellValueFactory { it.value.qtyProperty }
-        hargaCol?.setCellValueFactory { it.value.hargaProperty }
-        totalCol?.setCellValueFactory { it.value.totalProperty }
+        namaProdukCol.setCellValueFactory { it.value.namaProperty }
+        namaProdukCol.setCellFactory {
+            object : javafx.scene.control.TableCell<ProdukData, String>() {
+                override fun updateItem(item: String?, empty: Boolean) {
+                    super.updateItem(item, empty)
+                    text = item
+                    isWrapText = true
+                }
+            }
+        }
+        
+        uomCol.setCellValueFactory { it.value.uomProperty }
+        qtyCol.setCellValueFactory { it.value.qtyProperty }
+
+        // Format kolom harga dan total sebagai mata uang
+        val currencyFormat = NumberFormat.getCurrencyInstance(Locale("id", "ID"))
+
+        hargaCol.setCellValueFactory { it.value.hargaProperty }
+        hargaCol.setCellFactory {
+            object : javafx.scene.control.TableCell<ProdukData, String>() {
+                override fun updateItem(item: String?, empty: Boolean) {
+                    super.updateItem(item, empty)
+                    text = if (empty || item == null) null else {
+                        val value = item.replace(",", "").toDoubleOrNull() ?: 0.0
+                        currencyFormat.format(value)
+                    }
+                }
+            }
+        }
+
+        totalCol.setCellValueFactory { it.value.totalProperty }
+        totalCol.setCellFactory {
+            object : javafx.scene.control.TableCell<ProdukData, String>() {
+                override fun updateItem(item: String?, empty: Boolean) {
+                    super.updateItem(item, empty)
+                    text = if (empty || item == null) null else {
+                        val value = item.replace(",", "").toDoubleOrNull() ?: 0.0
+                        currencyFormat.format(value)
+                    }
+                }
+            }
+        }
     }
 
     fun populateData(data: DocumentData, idPerusahaan: Int = 1) {
         documentTypeLabel.text = data.documentType
-        nomorDokumenLabel.text = "No: ${data.nomorDokumen}"
-        tanggalDokumenLabel.text = "Tanggal: ${data.tanggalDokumen}"
-        contractRefLabel.text = "Contract Ref: ${data.contractRef ?: "-"}"
-        contractDateLabel.text = "Contract Date: ${data.contractDate ?: "-"}"
+        nomorDokumenLabel.text = data.nomorDokumen
+        tanggalDokumenLabel.text = data.tanggalDokumen
+        contractRefLabel.text = data.contractRef ?: "-"
+        contractDateLabel.text = data.contractDate ?: "-"
 
         namaPelangganLabel.text = data.namaPelanggan
         alamatPelangganLabel.text = data.alamatPelanggan
         teleponPelangganLabel.text = "Telp: ${data.teleponPelanggan}"
 
-        itemsTable.items.setAll(data.items)
+        // Populate tabel dengan data items
+        itemsTable.items.clear()
+        itemsTable.items.addAll(data.items)
 
         subtotalLabel.text = data.subtotal
         dpLabel.text = data.dp
         ppnLabel.text = data.ppn
         grandTotalLabel.text = data.grandTotal
+        terbilangLabel.text = "Terbilang: ${data.terbilang}"
         
         loadOwnerData(idPerusahaan)
     }
@@ -82,17 +136,34 @@ class InvoiceTemplateController {
     private fun loadOwnerData(idPerusahaan: Int = 1) {
         try {
             val conn = DatabaseHelper.getConnection()
-            val stmt = conn.prepareStatement("SELECT nama, nama_pemilik, jabatan_pemilik, logo_path FROM perusahaan WHERE id = ?")
+            val stmt = conn.prepareStatement("SELECT nama, alamat, telepon, hp, nama_pemilik, no_rek, nama_bank, lokasi_kantor_bank, jabatan_pemilik, logo_path FROM perusahaan WHERE id = ?")
             stmt.setInt(1, idPerusahaan)
             val rs = stmt.executeQuery()
             if (rs.next()) {
                 val namaPerusahaan = rs.getString("nama")
+                val alamat = rs.getString("alamat")
+                val telepon = rs.getString("telepon")
+                val hp = rs.getString("hp")
                 val namaPemilik = rs.getString("nama_pemilik")
                 val jabatanPemilik = rs.getString("jabatan_pemilik")
                 val logoPath = rs.getString("logo_path")
+                val noRek = rs.getString("no_rek")
+                val namaBank = rs.getString("nama_bank")
+                val lokasiKantorBank = rs.getString("lokasi_kantor_bank")
+
+                // Header perusahaan
+                namaPerusahaanHeader.text = if (!namaPerusahaan.isNullOrBlank()) namaPerusahaan else "Nama Perusahaan"
+                alamatPerusahaanHeader.text = if (!alamat.isNullOrBlank()) alamat else "Alamat Perusahaan"
+                teleponPerusahaanHeader.text = if (!telepon.isNullOrBlank()) "Telp: $telepon" else "Telp: -"
+                hpPerusahaanHeader.text = if (!hp.isNullOrBlank()) "HP: $hp" else "HP: -"
+                
+                // Footer perusahaan
                 companyNameLabel.text = if (!namaPerusahaan.isNullOrBlank()) namaPerusahaan else "Nama Perusahaan"
                 ownerNameLabel.text = if (!namaPemilik.isNullOrBlank()) namaPemilik else "Nama Pemilik"
                 ownerPositionLabel.text = if (!jabatanPemilik.isNullOrBlank()) jabatanPemilik else "Jabatan"
+                noRekLabel.text = if (!noRek.isNullOrBlank()) "IDR ACC NO. $noRek" else "No. Rekening: -"
+                bankNameLabel.text = if (!namaBank.isNullOrBlank()) "$namaBank" else "Bank: -"
+                bankLocationLabel.text = if (!lokasiKantorBank.isNullOrBlank()) "$lokasiKantorBank" else "Cabang: -"
                 
                 // Load logo
                 if (!logoPath.isNullOrBlank()) {
@@ -108,6 +179,10 @@ class InvoiceTemplateController {
                     }
                 }
             } else {
+                namaPerusahaanHeader.text = "Nama Perusahaan"
+                alamatPerusahaanHeader.text = "Alamat Perusahaan"
+                teleponPerusahaanHeader.text = "Telp: -"
+                hpPerusahaanHeader.text = "HP: -"
                 companyNameLabel.text = "Nama Perusahaan"
                 ownerNameLabel.text = "Nama Pemilik"
                 ownerPositionLabel.text = "Jabatan"
@@ -115,6 +190,10 @@ class InvoiceTemplateController {
             conn.close()
         } catch (e: Exception) {
             e.printStackTrace()
+            namaPerusahaanHeader.text = "Nama Perusahaan"
+            alamatPerusahaanHeader.text = "Alamat Perusahaan"
+            teleponPerusahaanHeader.text = "Telp: -"
+            hpPerusahaanHeader.text = "HP: -"
             companyNameLabel.text = "Nama Perusahaan"
             ownerNameLabel.text = "Nama Pemilik"
             ownerPositionLabel.text = "Jabatan"

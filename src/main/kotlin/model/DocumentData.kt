@@ -12,6 +12,7 @@ data class DocumentData(
     val dp: String,
     val ppn: String,
     val grandTotal: String,
+    val terbilang: String,
     val contractRef: String?,
     val contractDate: String?
 )
