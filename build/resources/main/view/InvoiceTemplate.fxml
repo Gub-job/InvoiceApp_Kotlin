@@ -96,17 +96,16 @@
       </VBox>
 
                           <!-- Items Table -->
-        <TableView fx:id="itemsTable" layoutX="30.0" layoutY="350.0" prefHeight="200.0" prefWidth="535.0" style="-fx-background-color: white;" stylesheets="@invoiceTable.css">
+        <TableView fx:id="itemsTable" layoutX="30.0" layoutY="348.0" prefHeight="202.0" prefWidth="532.0" style="-fx-background-color: white;" stylesheets="@invoiceTable.css">
             <columns>
-                <TableColumn fx:id="noCol" prefWidth="27.0" text="No." />
-                <TableColumn fx:id="qtyCol" prefWidth="64.0" text="Qty." />
-                <TableColumn fx:id="uomCol" prefWidth="57.0" text="UOM" />
-                <TableColumn fx:id="namaProdukCol" prefWidth="166.0" text="Description" />
+                <TableColumn fx:id="noCol" prefWidth="33.0" text="No." />
+                <TableColumn fx:id="qtyCol" prefWidth="84.0" text="Qty." />
+                <TableColumn fx:id="namaProdukCol" prefWidth="197.0" text="Description" />
                 <TableColumn fx:id="hargaCol" prefWidth="74.0" text="Unit / Price" />
                 <TableColumn fx:id="totalCol" prefWidth="145.0" text="Amount" />
             </columns>
         </TableView>
-      <GridPane gridLinesVisible="false" layoutX="261.0" layoutY="550.0" prefHeight="112.0" prefWidth="304.0" style="-fx-border-color: black; -fx-border-width: 1;">
+      <GridPane gridLinesVisible="false" layoutX="256.0" layoutY="550.0" prefHeight="112.0" prefWidth="304.0" style="-fx-border-color: black; -fx-border-width: 1;">
          <columnConstraints>
             <ColumnConstraints hgrow="SOMETIMES" maxWidth="196.0" minWidth="10.0" prefWidth="131.0" />
             <ColumnConstraints hgrow="SOMETIMES" maxWidth="271.0" minWidth="10.0" prefWidth="175.0" />

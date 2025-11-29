@@ -46,7 +46,6 @@ class InvoiceTemplateController {
     // Deklarasikan semua kolom tabel dengan @FXML
     @FXML private lateinit var noCol: TableColumn<ProdukData, String>
     @FXML private lateinit var namaProdukCol: TableColumn<ProdukData, String>
-    @FXML private lateinit var uomCol: TableColumn<ProdukData, String>
     @FXML private lateinit var qtyCol: TableColumn<ProdukData, String>
     @FXML private lateinit var hargaCol: TableColumn<ProdukData, String>
     @FXML private lateinit var totalCol: TableColumn<ProdukData, String>
@@ -76,11 +75,33 @@ class InvoiceTemplateController {
             }
         }
         
-        uomCol.setCellValueFactory { it.value.uomProperty }
-        qtyCol.setCellValueFactory { it.value.qtyProperty }
+        // Format untuk angka harga (dengan desimal)
+        val priceNumberFormat = NumberFormat.getNumberInstance(Locale("id", "ID")).apply {
+            maximumFractionDigits = 2
+            minimumFractionDigits = 2
+        }
 
-        // Format kolom harga dan total sebagai mata uang
-        val currencyFormat = NumberFormat.getCurrencyInstance(Locale("id", "ID"))
+        // Format untuk angka Qty (tanpa desimal)
+        val qtyNumberFormat = NumberFormat.getNumberInstance(Locale("id", "ID")).apply {
+            maximumFractionDigits = 0
+        }
+
+        qtyCol.setCellValueFactory { it.value.qtyProperty } // Tetap ambil data dari qtyProperty
+        qtyCol.setCellFactory {
+            object : javafx.scene.control.TableCell<ProdukData, String>() {
+                override fun updateItem(item: String?, empty: Boolean) {
+                    super.updateItem(item, empty)
+                    if (empty || item == null) {
+                        text = null
+                    } else {
+                        val formattedQty = qtyNumberFormat.format(item.toDoubleOrNull() ?: 0.0)
+                        val produkData = tableView.items.getOrNull(index)
+                        val uom = produkData?.uomProperty?.get() ?: ""
+                        text = if (uom.isNotBlank()) "$formattedQty $uom" else formattedQty
+                    }
+                }
+            }
+        }
 
         hargaCol.setCellValueFactory { it.value.hargaProperty }
         hargaCol.setCellFactory {
@@ -89,12 +110,14 @@ class InvoiceTemplateController {
                     super.updateItem(item, empty)
                     text = if (empty || item == null) null else {
                         val value = item.replace(",", "").toDoubleOrNull() ?: 0.0
-                        currencyFormat.format(value)
+                        priceNumberFormat.format(value)
                     }
                 }
             }
         }
 
+        // Format kolom total sebagai mata uang
+        val currencyFormat = NumberFormat.getCurrencyInstance(Locale("id", "ID"))
         totalCol.setCellValueFactory { it.value.totalProperty }
         totalCol.setCellFactory {
             object : javafx.scene.control.TableCell<ProdukData, String>() {
@@ -123,6 +146,9 @@ class InvoiceTemplateController {
         // Populate tabel dengan data items
         itemsTable.items.clear()
         itemsTable.items.addAll(data.items)
+
+        // Kembalikan header kolom Qty ke teks statis
+        qtyCol.text = "Qty."
 
         subtotalLabel.text = data.subtotal
         dpLabel.text = data.dp

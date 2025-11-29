@@ -194,7 +194,16 @@ class ProformaController {
             currency = java.util.Currency.getInstance("IDR")
         }
 
-        kolomQty.cellFactory = TextFieldTableCell.forTableColumn()
+        kolomQty.cellFactory = object : Callback<TableColumn<ProdukData, String>, TableCell<ProdukData, String>> {
+            override fun call(param: TableColumn<ProdukData, String>): TableCell<ProdukData, String> {
+                return object : TextFieldTableCell<ProdukData, String>() {
+                    override fun updateItem(item: String?, empty: Boolean) {
+                        super.updateItem(item, empty)
+                        text = if (empty || item == null) null else numberFormat.format(item.toDoubleOrNull() ?: 0.0)
+                    }
+                }
+            }
+        }
         kolomHarga.setCellValueFactory { it.value.hargaProperty }
         kolomHarga.cellFactory = TextFieldTableCell.forTableColumn()
         kolomHarga.setCellFactory {
