@@ -8,71 +8,78 @@
 
 <VBox alignment="TOP_CENTER" prefHeight="700.0" prefWidth="1000.0" spacing="10.0"
     style="-fx-background-color: white; -fx-padding: 20;"
-    xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
+    xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1"
     fx:controller="controller.LaporanCetakController">
     <children>
         <!-- Header Perusahaan -->
         <HBox alignment="CENTER_LEFT" spacing="15.0">
-            <ImageView fx:id="logoImageView" fitHeight="60.0" fitWidth="60.0" preserveRatio="true" visible="false"/>
+            <ImageView fx:id="logoImageView" fitHeight="60.0" fitWidth="60.0" preserveRatio="true"
+                visible="false" />
             <VBox alignment="CENTER_LEFT" spacing="5.0">
-                <Label fx:id="labelNamaPerusahaan" text="NAMA PERUSAHAAN" style="-fx-font-weight: bold; -fx-font-size: 18px;"/>
-                <Label fx:id="labelAlamatPerusahaan" text="Alamat Perusahaan"/>
-                <Label fx:id="labelKontakPerusahaan" text="Telp: - | Email: -"/>
+                <Label fx:id="labelNamaPerusahaan" text="NAMA PERUSAHAAN"
+                    style="-fx-font-weight: bold; -fx-font-size: 18px;" />
+                <Label fx:id="labelAlamatPerusahaan" text="Alamat Perusahaan" />
+                <Label fx:id="labelKontakPerusahaan" text="Telp: - | Email: -" />
             </VBox>
         </HBox>
-        
-        <Separator/>
-        
+
+        <Separator />
+
         <!-- Judul Laporan -->
-        <Label text="LAPORAN PENJUALAN" style="-fx-font-weight: bold; -fx-font-size: 16px;" alignment="CENTER"/>
-        
+        <Label text="LAPORAN PENJUALAN" style="-fx-font-weight: bold; -fx-font-size: 16px;"
+            alignment="CENTER" />
+
         <!-- Info Laporan -->
         <HBox spacing="20.0">
             <VBox spacing="3.0">
-                <Label text="Periode" style="-fx-font-weight: bold;"/>
-                <Label text="Tanggal Cetak" style="-fx-font-weight: bold;"/>
+                <Label text="Periode" style="-fx-font-weight: bold;" />
+                <Label text="Tanggal Cetak" style="-fx-font-weight: bold;" />
             </VBox>
             <VBox spacing="3.0">
-                <Label fx:id="labelPeriode" text=": -"/>
-                <Label fx:id="labelTanggalCetak" text=": -"/>
+                <Label fx:id="labelPeriode" text=": -" />
+                <Label fx:id="labelTanggalCetak" text=": -" />
             </VBox>
         </HBox>
-        
-        <Separator/>
-        
+
+        <Separator />
+
         <!-- Tabel Data -->
         <TableView fx:id="tableView" prefHeight="350.0" VBox.vgrow="ALWAYS">
             <columns>
-                <TableColumn fx:id="kolomTanggal" prefWidth="100.0" text="Tanggal"/>
-                <TableColumn fx:id="kolomNomor" prefWidth="120.0" text="Nomor"/>
-                <TableColumn fx:id="kolomPelanggan" prefWidth="180.0" text="Pelanggan"/>
-                <TableColumn fx:id="kolomNamaProduk" prefWidth="200.0" text="Produk"/>
-                <TableColumn fx:id="kolomQty" prefWidth="80.0" text="Qty"/>
-                <TableColumn fx:id="kolomHarga" prefWidth="120.0" text="Harga"/>
-                <TableColumn fx:id="kolomTotal" prefWidth="120.0" text="Total"/>
-                <TableColumn fx:id="kolomPpn" prefWidth="100.0" text="PPN"/>
-                <TableColumn fx:id="kolomTotalPpn" prefWidth="120.0" text="Total+PPN"/>
+                <TableColumn fx:id="kolomTanggal" prefWidth="100.0" text="Tanggal" />
+                <TableColumn fx:id="kolomNomor" prefWidth="120.0" text="Nomor" />
+                <TableColumn fx:id="kolomPelanggan" prefWidth="180.0" text="Pelanggan" />
+                <TableColumn fx:id="kolomNamaProduk" prefWidth="200.0" text="Produk" />
+                <TableColumn fx:id="kolomQty" prefWidth="80.0" text="Qty" />
+                <TableColumn fx:id="kolomHarga" prefWidth="120.0" text="Harga" />
+                <TableColumn fx:id="kolomTotal" prefWidth="120.0" text="Total" />
+                <TableColumn fx:id="kolomPpn" prefWidth="100.0" text="PPN" />
+                <TableColumn fx:id="kolomTotalPpn" prefWidth="120.0" text="Total+PPN" />
             </columns>
         </TableView>
-        
+
         <!-- Footer -->
         <HBox alignment="CENTER_RIGHT" spacing="20.0">
             <VBox.margin>
-                <Insets top="20.0"/>
+                <Insets top="20.0" />
             </VBox.margin>
             <VBox alignment="CENTER_RIGHT" spacing="5.0">
-                <Label fx:id="labelTotalKeseluruhan" text="Total Keseluruhan: Rp 0" style="-fx-font-weight: bold; -fx-font-size: 14px;"/>
+                <Label fx:id="labelTotalKeseluruhan" text="Total Keseluruhan: Rp 0"
+                    style="-fx-font-weight: bold; -fx-font-size: 14px;" />
             </VBox>
         </HBox>
-        
+
         <!-- Tombol Aksi -->
         <HBox alignment="CENTER" spacing="10.0">
             <VBox.margin>
-                <Insets top="20.0"/>
+                <Insets top="20.0" />
             </VBox.margin>
-            <Button text="Cetak" onAction="#onCetakClicked" style="-fx-background-color: #3b82f6; -fx-text-fill: white; -fx-font-weight: bold;"/>
-            <Button text="Ekspor Excel" onAction="#onEksporExcelClicked" style="-fx-background-color: #10b981; -fx-text-fill: white; -fx-font-weight: bold;"/>
-            <Button text="Tutup" onAction="#onTutupClicked" style="-fx-background-color: #6b7280; -fx-text-fill: white; -fx-font-weight: bold;"/>
+            <Button text="Cetak" onAction="#onCetakClicked"
+                style="-fx-background-color: #3b82f6; -fx-text-fill: white; -fx-font-weight: bold;" />
+            <Button text="Ekspor Excel" onAction="#onEksporExcelClicked"
+                style="-fx-background-color: #10b981; -fx-text-fill: white; -fx-font-weight: bold;" />
+            <Button text="Tutup" onAction="#onTutupClicked"
+                style="-fx-background-color: #6b7280; -fx-text-fill: white; -fx-font-weight: bold;" />
         </HBox>
     </children>
 </VBox>

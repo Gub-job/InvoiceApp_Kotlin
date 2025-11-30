@@ -186,28 +186,63 @@ class ProformaController {
         kolomQty.setCellValueFactory { it.value.qtyProperty }
 
         // Gunakan CellFactory untuk memformat tampilan angka
-        val numberFormat = NumberFormat.getNumberInstance(Locale("id", "ID")).apply {
+        val numberFormat = NumberFormat.getNumberInstance(Locale.forLanguageTag("id-ID")).apply {
             maximumFractionDigits = 0
         }
-        val currencyFormat = NumberFormat.getCurrencyInstance(Locale("id", "ID")).apply {
+        val currencyFormat = NumberFormat.getCurrencyInstance(Locale.forLanguageTag("id-ID")).apply {
             maximumFractionDigits = 2
             currency = java.util.Currency.getInstance("IDR")
         }
 
-        kolomQty.cellFactory = object : Callback<TableColumn<ProdukData, String>, TableCell<ProdukData, String>> {
-            override fun call(param: TableColumn<ProdukData, String>): TableCell<ProdukData, String> {
-                return object : TextFieldTableCell<ProdukData, String>() {
-                    override fun updateItem(item: String?, empty: Boolean) {
-                        super.updateItem(item, empty)
-                        text = if (empty || item == null) null else numberFormat.format(item.toDoubleOrNull() ?: 0.0)
+        // Cell factory kustom untuk Qty dengan penanganan Tab
+        kolomQty.cellFactory = Callback {
+            object : TextFieldTableCell<ProdukData, String>() {
+                override fun startEdit() {
+                    super.startEdit()
+                    (graphic as? TextField)?.let { textField ->
+                        textField.setOnKeyPressed { event ->
+                            if (event.code == javafx.scene.input.KeyCode.TAB) {
+                                commitEdit(textField.text)
+                                // VERSI TERBAIK: Pindah ke kolom Harga di baris yang sama.
+                                javafx.application.Platform.runLater { table.edit(index, kolomHarga) }
+                                event.consume() // Hentikan event agar tidak pindah ke Contract Ref
+                            }
+                        }
                     }
+                }
+
+                override fun updateItem(item: String?, empty: Boolean) {
+                    super.updateItem(item, empty)
+                    text = if (empty || item == null) null else numberFormat.format(item.toDoubleOrNull() ?: 0.0)
                 }
             }
         }
         kolomHarga.setCellValueFactory { it.value.hargaProperty }
-        kolomHarga.cellFactory = TextFieldTableCell.forTableColumn()
-        kolomHarga.setCellFactory {
+        // Cell factory kustom untuk Harga dengan penanganan Tab
+        kolomHarga.cellFactory = Callback {
             object : TextFieldTableCell<ProdukData, String>() {
+                override fun startEdit() {
+                    super.startEdit()
+                    (graphic as? TextField)?.let { textField ->
+                        textField.setOnKeyPressed { event ->
+                            if (event.code == javafx.scene.input.KeyCode.TAB) {
+                                commitEdit(textField.text)
+                                // VERSI TERBAIK: Pindah ke baris berikutnya, atau buat baris baru jika ini yang terakhir.
+                                javafx.application.Platform.runLater {
+                                    if (index < detailList.size - 1) {
+                                        table.edit(index + 1, kolomNama)
+                                    } else {
+                                        // Jika ini baris terakhir, panggil aksi tombol "Tambah" untuk membuat baris baru
+                                        // dan otomatis fokus ke kolom nama di baris baru tersebut.
+                                        tambahBtn.fire()
+                                    }
+                                }
+                                event.consume() // Hentikan event agar tidak pindah ke komponen lain di luar tabel.
+                            }
+                        }
+                    }
+                }
+
                 override fun updateItem(item: String?, empty: Boolean) {
                     super.updateItem(item, empty)
                     text = if (empty || item == null) null else numberFormat.format(item.toDoubleOrNull() ?: 0.0)
