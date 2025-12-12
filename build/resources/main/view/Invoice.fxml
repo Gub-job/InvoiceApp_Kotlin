@@ -69,16 +69,8 @@
     </GridPane>
 
     <!-- Table Produk -->
-    <TableView fx:id="table" prefHeight="300" editable="true">
-        <columns>
-            <TableColumn fx:id="kolomNo" text="No" prefWidth="60" />
-            <TableColumn fx:id="kolomNama" text="Nama Barang" prefWidth="200" />
-            <TableColumn fx:id="kolomQty" text="Qty" prefWidth="80" />
-            <TableColumn fx:id="kolomUom" text="UOM" prefWidth="80" />
-            <TableColumn fx:id="kolomHarga" text="Unit Price" prefWidth="100" />
-            <TableColumn fx:id="kolomTotal" text="Amount" prefWidth="120" />
-        </columns>
-    </TableView>
+    <!-- Container untuk tabel baru berbasis GridPane -->
+    <VBox fx:id="tableContainer" VBox.vgrow="ALWAYS" />
 
     <!-- Bagian Total, PPN, dan Grand Total -->
     <GridPane hgap="10" vgap="5" alignment="CENTER_RIGHT">

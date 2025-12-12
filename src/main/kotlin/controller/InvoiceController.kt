@@ -3,10 +3,10 @@ package controller
 import javafx.beans.property.SimpleStringProperty
 import javafx.collections.FXCollections
 import javafx.fxml.FXML
-import javafx.geometry.Bounds
-import javafx.geometry.Insets
+import javafx.geometry.*
 import javafx.geometry.Pos
 import javafx.scene.layout.Pane
+import javafx.scene.layout.*
 import javafx.scene.Scene
 import javafx.scene.control.*
 import javafx.scene.image.ImageView
@@ -52,7 +52,7 @@ class InvoiceController {
     @FXML private lateinit var kolomTotal: TableColumn<ProdukData, String>
     @FXML private lateinit var kolomNama: TableColumn<ProdukData, String>
     @FXML private lateinit var kolomUom: TableColumn<ProdukData, String>
-    @FXML private lateinit var table: TableView<ProdukData>
+    @FXML private lateinit var tableContainer: VBox // Ganti TableView dengan VBox di FXML
     @FXML private lateinit var simpanBtn: Button
     @FXML private lateinit var cetakBtn: Button
     @FXML private lateinit var hapusBtn: Button
@@ -66,6 +66,9 @@ class InvoiceController {
     @FXML private lateinit var grandTotalLabel: Label
     @FXML private lateinit var contractRefField: TextField
     @FXML private lateinit var contractDatePicker: DatePicker
+
+    // Komponen baru untuk menggantikan TableView
+    private lateinit var tableGrid: GridPane
 
     private val pelangganList = FXCollections.observableArrayList<PelangganData>()
     private val produkList = FXCollections.observableArrayList<ProdukData>()
@@ -86,7 +89,8 @@ class InvoiceController {
     private var idPerusahaan: Int = 0
     private var idInvoiceBaru: Int = 0
     private var isEditMode = false
-    private var currentEditingCell: TextFieldTableCell<ProdukData, String>? = null
+    private var currentProdukField: TextField? = null
+    private var currentProdukData: ProdukData? = null
 
     fun setIdPerusahaan(id: Int) {
         idPerusahaan = id
@@ -173,6 +177,7 @@ class InvoiceController {
                 hitungTotalBaris(produk)
             }
             updateTotals()
+            redrawTable() // Gambar ulang grid setelah memuat data
         } catch (e: Exception) {
             showAlert("Error", "Gagal memuat data invoice: ${e.message}")
         } finally {
@@ -224,182 +229,20 @@ class InvoiceController {
 
     @FXML
     fun initialize() {
-        table.isEditable = true
-        table.items = detailList
-        table.columnResizePolicy = TableView.CONSTRAINED_RESIZE_POLICY
-
-        kolomNama.setCellValueFactory { it.value.namaProperty }
-        kolomUom.setCellValueFactory { it.value.uomProperty }
-        kolomQty.setCellValueFactory { it.value.qtyProperty }
-
-        // Gunakan CellFactory untuk memformat tampilan angka
-        val numberFormat = NumberFormat.getNumberInstance(Locale.forLanguageTag("id-ID")).apply {
-            maximumFractionDigits = 0
-        }
-        val currencyFormat = NumberFormat.getCurrencyInstance(Locale.forLanguageTag("id-ID")).apply {
-            maximumFractionDigits = 2
-            currency = java.util.Currency.getInstance("IDR")
-        }
-
-        // Cell factory kustom untuk Qty dengan penanganan Tab
-        kolomQty.cellFactory = Callback {
-            object : TextFieldTableCell<ProdukData, String>() {
-                override fun startEdit() {
-                    super.startEdit()
-                    (graphic as? TextField)?.let { textField ->
-                        textField.setOnKeyPressed { event ->
-                            if (event.code == javafx.scene.input.KeyCode.TAB) {
-                                commitEdit(textField.text)
-                                // VERSI TERBAIK: Pindah ke kolom Harga di baris yang sama.
-                                javafx.application.Platform.runLater { table.edit(index, kolomHarga) }
-                                event.consume() // Hentikan event agar tidak pindah ke komponen lain
-                            }
-                        }
-                    }
-                }
-
-                override fun updateItem(item: String?, empty: Boolean) {
-                    super.updateItem(item, empty)
-                    text = if (empty || item == null) null else numberFormat.format(item.toDoubleOrNull() ?: 0.0)
-                }
-            }
-        }
-        kolomHarga.setCellValueFactory { it.value.hargaProperty }
-        // Cell factory kustom untuk Harga dengan penanganan Tab
-        kolomHarga.cellFactory = Callback {
-            object : TextFieldTableCell<ProdukData, String>() {
-                override fun startEdit() {
-                    super.startEdit()
-                    (graphic as? TextField)?.let { textField ->
-                        textField.setOnKeyPressed { event ->
-                            if (event.code == javafx.scene.input.KeyCode.TAB) {
-                                commitEdit(textField.text)
-                                // VERSI TERBAIK: Pindah ke baris berikutnya, atau buat baris baru jika ini yang terakhir.
-                                javafx.application.Platform.runLater {
-                                    if (index < detailList.size - 1) {
-                                        table.edit(index + 1, kolomNama)
-                                    } else {
-                                        // Jika ini baris terakhir, panggil aksi tombol "Tambah" untuk membuat baris baru
-                                        // dan otomatis fokus ke kolom nama di baris baru tersebut.
-                                        tambahBtn.fire()
-                                    }
-                                }
-                                event.consume() // Hentikan event agar tidak pindah ke komponen lain di luar tabel.
-                            }
-                        }
-                    }
-                }
-
-                override fun updateItem(item: String?, empty: Boolean) {
-                    super.updateItem(item, empty)
-                    text = if (empty || item == null) null else numberFormat.format(item.toDoubleOrNull() ?: 0.0)
-                }
-            }
-        }
-
-        kolomTotal.setCellValueFactory { it.value.totalProperty }
-        kolomTotal.setCellFactory {
-            object : TableCell<ProdukData, String>() {
-                override fun updateItem(item: String?, empty: Boolean) {
-                    super.updateItem(item, empty)
-                    text = if (empty || item == null) null else currencyFormat.format(item.toDoubleOrNull() ?: 0.0)
-                }
-            }
-        }
-
-        // Custom cell factory untuk Qty dengan Tab support
-        kolomNama.cellFactory = Callback {
-            object : TextFieldTableCell<ProdukData, String>() {
-                override fun startEdit() {
-                    super.startEdit()
-                    val tf = graphic as? TextField
-                    tf?.textProperty()?.addListener { _, _, newValue ->
-                        filterAndShowProdukForCell(newValue, tf)
-                    }
-                    tf?.setOnKeyPressed { event ->
-                        when (event.code) {
-                            javafx.scene.input.KeyCode.DOWN -> {
-                                if (produkPopup.isShowing) {
-                                    produkListView.requestFocus()
-                                    produkListView.selectionModel.selectFirst()
-                                }
-                                event.consume()
-                            }
-                            javafx.scene.input.KeyCode.TAB -> {
-                                if (produkPopup.isShowing && produkListView.items.isNotEmpty()) {
-                                    val selected = produkListView.selectionModel.selectedItem ?: produkListView.items[0]
-                                    applyProdukToCell(selected, tf)
-                                    event.consume()
-                                }
-                            }
-                            javafx.scene.input.KeyCode.ENTER -> {
-                                if (produkPopup.isShowing && produkListView.selectionModel.selectedItem != null) {
-                                    val selected = produkListView.selectionModel.selectedItem
-                                    applyProdukToCell(selected, tf)
-                                    event.consume()
-                                }
-                            }
-                            javafx.scene.input.KeyCode.ESCAPE -> {
-                                produkPopup.hide()
-                                event.consume()
-                            }
-                            else -> {}
-                        }
-                    }
-                }
-
-                override fun cancelEdit() {
-                    super.cancelEdit()
-                    produkPopup.hide()
-                }
-
-                override fun commitEdit(newValue: String?) {
-                    super.commitEdit(newValue)
-                    produkPopup.hide()
-                }
-            }
-        }
-
-        kolomQty.setOnEditCommit {
-            val value = it.newValue.replace(",", "")
-            it.rowValue.qtyProperty.set(value) // Simpan sebagai angka murni
-            hitungTotalBaris(it.rowValue)
-            updateTotals()
-        }
-        kolomHarga.setOnEditCommit {
-            val value = it.newValue.replace(",", "")
-            it.rowValue.hargaProperty.set(value) // Simpan sebagai angka murni
-            hitungTotalBaris(it.rowValue)
-            updateTotals()
-        }
-
-        kolomNo.setCellFactory {
-            object : TableCell<ProdukData, String>() {
-                override fun updateItem(item: String?, empty: Boolean) {
-                    super.updateItem(item, empty)
-                    text = if (empty) null else (index + 1).toString()
-                }
-            }
-        }
+        setupTableGrid()
 
         setupPelangganAutocomplete()
         setupProdukAutocomplete()
         setupProformaRefAutocomplete()
 
         tambahBtn.setOnAction {
-            val newProduk = ProdukData(0, "", "", "")
-            detailList.add(newProduk)
-            javafx.application.Platform.runLater {
-                table.selectionModel.select(detailList.size - 1)
-                table.edit(detailList.size - 1, kolomNama)
-            }
+            addNewRow()
         }
 
         hapusItemBtn.setOnAction {
-            val selected = table.selectionModel.selectedItem
-            if (selected != null) {
-                detailList.remove(selected)
-                // hapusDetailDariDB(selected) // Implement if needed
+            if (detailList.isNotEmpty()) {
+                detailList.removeAt(detailList.size - 1)
+                redrawTable()
                 updateTotals()
             }
         }
@@ -429,6 +272,183 @@ class InvoiceController {
 
     }
 
+    private fun setupTableGrid() {
+        tableGrid = GridPane().apply {
+            hgap = 5.0
+            vgap = 5.0
+            padding = javafx.geometry.Insets(10.0)
+        }
+
+        // Atur constraint kolom agar lebarnya sesuai
+        val colNo = ColumnConstraints().apply { percentWidth = 5.0 }
+        val colNama = ColumnConstraints().apply { percentWidth = 40.0 }
+        val colQty = ColumnConstraints().apply { percentWidth = 10.0 }
+        val colUom = ColumnConstraints().apply { percentWidth = 10.0 }
+        val colHarga = ColumnConstraints().apply { percentWidth = 15.0 }
+        val colTotal = ColumnConstraints().apply { percentWidth = 20.0 }
+        tableGrid.columnConstraints.addAll(colNo, colNama, colQty, colUom, colHarga, colTotal)
+
+        val scrollPane = ScrollPane(tableGrid).apply {
+            isFitToWidth = true
+            vbarPolicy = ScrollPane.ScrollBarPolicy.AS_NEEDED
+        }
+        tableContainer.children.clear()
+        tableContainer.children.add(scrollPane)
+        VBox.setVgrow(scrollPane, Priority.ALWAYS)
+
+        redrawTable()
+    }
+
+    private fun redrawTable() {
+        tableGrid.children.clear()
+
+        // Header
+        val headers = listOf("No", "Nama Barang", "Qty", "UOM", "Harga", "Total")
+        headers.forEachIndexed { index, text ->
+            val headerLabel = Label(text).apply { style = "-fx-font-weight: bold;" }
+            tableGrid.add(headerLabel, index, 0)
+        }
+
+        // Data Rows
+        detailList.forEachIndexed { rowIndex, produkData ->
+            val actualRow = rowIndex + 1
+
+            // No
+            tableGrid.add(Label(actualRow.toString()), 0, actualRow)
+
+            // Nama Barang (TextField dengan Autocomplete)
+            val namaField = TextField(produkData.namaProperty.get()).apply {
+                textProperty().bindBidirectional(produkData.namaProperty)
+                promptText = "Ketik nama produk"
+                maxWidth = Double.MAX_VALUE
+                
+                // Set focus listener untuk menyimpan referensi
+                focusedProperty().addListener { _, _, focused ->
+                    if (focused) {
+                        currentProdukField = this
+                        currentProdukData = produkData
+                    }
+                }
+                
+                // Autocomplete saat mengetik
+                textProperty().addListener { _, _, newValue ->
+                    currentProdukField = this
+                    currentProdukData = produkData
+                    if (newValue.isNotEmpty()) {
+                        val filtered = produkList.filter { 
+                            it.namaProperty.get().contains(newValue, ignoreCase = true) 
+                        }
+                        if (filtered.isNotEmpty()) {
+                            produkListView.items.setAll(filtered)
+                            produkListView.selectionModel.selectFirst()
+                            if (!produkPopup.isShowing) {
+                                val bounds = localToScreen(boundsInLocal)
+                                if (bounds != null) {
+                                    produkPopup.show(this, bounds.minX, bounds.minY + bounds.height)
+                                }
+                            }
+                        } else {
+                            produkPopup.hide()
+                        }
+                    } else {
+                        produkPopup.hide()
+                    }
+                }
+                
+                // Keyboard navigation
+                setOnKeyPressed { event ->
+                    when (event.code) {
+                        javafx.scene.input.KeyCode.DOWN -> {
+                            if (produkPopup.isShowing) {
+                                produkListView.requestFocus()
+                                if (produkListView.selectionModel.isEmpty) {
+                                    produkListView.selectionModel.selectFirst()
+                                }
+                            }
+                            event.consume()
+                        }
+                        javafx.scene.input.KeyCode.ENTER, javafx.scene.input.KeyCode.TAB -> {
+                            if (produkPopup.isShowing && produkListView.items.isNotEmpty()) {
+                                val selected = produkListView.selectionModel.selectedItem ?: produkListView.items[0]
+                                produkData.idProperty.set(selected.idProperty.get())
+                                produkData.namaProperty.set(selected.namaProperty.get())
+                                produkData.uomProperty.set(selected.uomProperty.get())
+                                produkData.divisiProperty.set(selected.divisiProperty.get())
+                                produkData.singkatanProperty.set(selected.singkatanProperty.get())
+                                produkPopup.hide()
+                                updateNomorIfReady()
+                                redrawTable()
+                                
+                                // Pindah fokus ke field Qty di baris yang sama
+                                javafx.application.Platform.runLater {
+                                    val rowIndex = detailList.indexOf(produkData) + 1
+                                    val qtyField = tableGrid.children.find { 
+                                        GridPane.getRowIndex(it) == rowIndex && GridPane.getColumnIndex(it) == 2 
+                                    } as? TextField
+                                    qtyField?.requestFocus()
+                                }
+                                event.consume()
+                            }
+                        }
+                        javafx.scene.input.KeyCode.ESCAPE -> {
+                            produkPopup.hide()
+                            event.consume()
+                        }
+                        else -> {}
+                    }
+                }
+            }
+            tableGrid.add(namaField, 1, actualRow)
+
+            // Qty
+            val qtyField = TextField(produkData.qtyProperty.get()).apply {
+                textProperty().bindBidirectional(produkData.qtyProperty)
+                textProperty().addListener { _, _, _ ->
+                    hitungTotalBaris(produkData)
+                    updateTotals()
+                }
+            }
+            tableGrid.add(qtyField, 2, actualRow)
+
+            // UOM
+            val uomLabel = Label().apply { textProperty().bind(produkData.uomProperty) }
+            tableGrid.add(uomLabel, 3, actualRow)
+
+            // Harga
+            val hargaField = TextField(produkData.hargaProperty.get()).apply {
+                textProperty().bindBidirectional(produkData.hargaProperty)
+                textProperty().addListener { _, _, _ ->
+                    hitungTotalBaris(produkData)
+                    updateTotals()
+                }
+                // LOGIKA TAB TERAKHIR
+                setOnKeyPressed { event ->
+                    if (event.code == javafx.scene.input.KeyCode.TAB) {
+                        // Jika ini baris terakhir, buat baris baru
+                        if (rowIndex == detailList.size - 1) {
+                            addNewRow()
+                        }
+                    }
+                }
+            }
+            tableGrid.add(hargaField, 4, actualRow)
+
+            // Total
+            val totalLabel = Label().apply { textProperty().bind(produkData.totalProperty) }
+            tableGrid.add(totalLabel, 5, actualRow)
+        }
+    }
+
+    private fun addNewRow() {
+        val newProduk = ProdukData(0, "", "", "")
+        detailList.add(newProduk)
+        redrawTable()
+        // Fokus ke field nama di baris baru
+        javafx.application.Platform.runLater {
+            (tableGrid.children.lastOrNull { GridPane.getRowIndex(it) == detailList.size && GridPane.getColumnIndex(it) == 1 } as? ComboBox<*>)?.requestFocus()
+        }
+    }
+
     private fun setupProformaRefAutocomplete() {
         proformaRefListView.cellFactory = Callback {
             object : ListCell<ProformaRefData>() {
@@ -451,7 +471,7 @@ class InvoiceController {
             if (filtered.isNotEmpty()) {
                 // Hanya tampilkan popup jika field sudah terlihat di layar
                 if (contractRefField.scene?.window?.isShowing == true) {
-                    val screenBounds: Bounds = contractRefField.localToScreen(contractRefField.boundsInLocal)
+                    val screenBounds = contractRefField.localToScreen(contractRefField.boundsInLocal)
                     proformaRefPopup.show(contractRefField, screenBounds.minX, screenBounds.minY + screenBounds.height)
                 }
             } else {
@@ -548,49 +568,48 @@ class InvoiceController {
 
         produkListView.setOnMouseClicked {
             if (it.clickCount == 1 && produkListView.selectionModel.selectedItem != null) {
-                val selectedProduk = produkListView.selectionModel.selectedItem
-                val selectedRow = table.selectionModel.selectedIndex
-                if (selectedRow >= 0 && selectedRow < detailList.size) {
-                    val row = detailList[selectedRow]
-                    row.idProperty.set(selectedProduk.idProperty.get())
-                    row.namaProperty.set(selectedProduk.namaProperty.get())
-                    row.uomProperty.set(selectedProduk.uomProperty.get())
-                    row.divisiProperty.set(selectedProduk.divisiProperty.get())
-                    row.singkatanProperty.set(selectedProduk.singkatanProperty.get())
+                val selected = produkListView.selectionModel.selectedItem
+                if (currentProdukData != null && currentProdukField != null) {
+                    currentProdukData!!.idProperty.set(selected.idProperty.get())
+                    currentProdukData!!.namaProperty.set(selected.namaProperty.get())
+                    currentProdukData!!.uomProperty.set(selected.uomProperty.get())
+                    currentProdukData!!.divisiProperty.set(selected.divisiProperty.get())
+                    currentProdukData!!.singkatanProperty.set(selected.singkatanProperty.get())
+                    updateNomorIfReady()
+                    redrawTable()
                 }
                 produkPopup.hide()
-                table.edit(-1, null)
-                table.refresh()
-                updateNomorIfReady()
-                moveToNextColumn()
             }
         }
 
         produkListView.setOnKeyPressed { event ->
             when (event.code) {
                 javafx.scene.input.KeyCode.ENTER, javafx.scene.input.KeyCode.TAB -> {
-                    val selectedProduk = produkListView.selectionModel.selectedItem
-                    if (selectedProduk != null) {
-                        val selectedRow = table.selectionModel.selectedIndex
-                        if (selectedRow >= 0 && selectedRow < detailList.size) {
-                            val row = detailList[selectedRow]
-                            row.idProperty.set(selectedProduk.idProperty.get())
-                            row.namaProperty.set(selectedProduk.namaProperty.get())
-                            row.uomProperty.set(selectedProduk.uomProperty.get())
-                            row.divisiProperty.set(selectedProduk.divisiProperty.get())
-                            row.singkatanProperty.set(selectedProduk.singkatanProperty.get())
-                        }
-                        produkPopup.hide()
-                        table.edit(-1, null)
-                        table.refresh()
+                    val selected = produkListView.selectionModel.selectedItem
+                    if (selected != null && currentProdukData != null) {
+                        currentProdukData!!.idProperty.set(selected.idProperty.get())
+                        currentProdukData!!.namaProperty.set(selected.namaProperty.get())
+                        currentProdukData!!.uomProperty.set(selected.uomProperty.get())
+                        currentProdukData!!.divisiProperty.set(selected.divisiProperty.get())
+                        currentProdukData!!.singkatanProperty.set(selected.singkatanProperty.get())
                         updateNomorIfReady()
-                        moveToNextColumn()
+                        redrawTable()
+                        
+                        // Pindah fokus ke field Qty di baris yang sama
+                        javafx.application.Platform.runLater {
+                            val rowIndex = detailList.indexOf(currentProdukData) + 1
+                            val qtyField = tableGrid.children.find { 
+                                GridPane.getRowIndex(it) == rowIndex && GridPane.getColumnIndex(it) == 2 
+                            } as? TextField
+                            qtyField?.requestFocus()
+                        }
                     }
+                    produkPopup.hide()
                     event.consume()
                 }
                 javafx.scene.input.KeyCode.ESCAPE -> {
                     produkPopup.hide()
-                    table.requestFocus()
+                    currentProdukField?.requestFocus()
                     event.consume()
                 }
                 else -> {}
@@ -637,49 +656,12 @@ class InvoiceController {
         }
     }
 
-    private fun applyProdukToCell(produk: ProdukData, textField: TextField) {
-        val selectedRow = table.selectionModel.selectedIndex
-        if (selectedRow >= 0 && selectedRow < detailList.size) {
-            val row = detailList[selectedRow]
-            row.idProperty.set(produk.idProperty.get())
-            row.namaProperty.set(produk.namaProperty.get())
-            row.uomProperty.set(produk.uomProperty.get())
-            row.divisiProperty.set(produk.divisiProperty.get())
-            row.singkatanProperty.set(produk.singkatanProperty.get())
-        }
-        produkPopup.hide()
-        table.edit(-1, null)
-        table.refresh()
-        updateNomorIfReady()
-        moveToNextColumn()
-    }
-
     private fun hideProdukSearch() {
         try {
             (produkSearchField.scene?.root as? Pane)?.children?.remove(produkSearchField)
         } catch (e: Exception) {
             // Ignore error jika sudah tidak ada
         }
-        produkPopup.hide()
-        table.requestFocus()
-    }
-
-
-    private fun applyProdukAndMoveNext(produk: ProdukData?) {
-        if (produk != null && currentEditingCell != null) {
-            val row = currentEditingCell?.tableRow?.item
-            if (row != null) {
-                row.idProperty.set(produk.idProperty.get())
-                row.namaProperty.set(produk.namaProperty.get())
-                row.uomProperty.set(produk.uomProperty.get())
-                row.divisiProperty.set(produk.divisiProperty.get())
-                row.singkatanProperty.set(produk.singkatanProperty.get())
-                currentEditingCell?.commitEdit(produk.namaProperty.get())
-            }
-        }
-        hideProdukSearch()
-        updateNomorIfReady() // Panggil di sini agar nomor selalu ter-update setelah produk dipilih
-        moveToNextColumn()
     }
     
     private fun updateNomorIfReady() {
@@ -698,12 +680,7 @@ class InvoiceController {
     }
 
     private fun moveToNextColumn() {
-        val selectedRow = table.selectionModel.selectedIndex
-        if (selectedRow >= 0) {
-            javafx.application.Platform.runLater {
-                table.edit(selectedRow, kolomQty)
-            }
-        }
+        // Tidak relevan lagi dengan GridPane
     }
 
     private fun simpanInvoiceDanDetail() {
@@ -1027,7 +1004,7 @@ class InvoiceController {
         } catch (e: Exception) {
             item.totalProperty.set("0.0")
         }
-        table.refresh()
+        // table.refresh() // Tidak perlu dengan binding
     }
 
     private fun updateTotals() {
@@ -1051,11 +1028,6 @@ class InvoiceController {
         subtotalLabel.text = String.format("%,.2f", subtotal)
         ppnAmountLabel.text = String.format("%,.2f", ppnAmount)
         grandTotalLabel.text = String.format("%,.2f", grandTotal)
-
-        table.columns.firstOrNull()?.let {
-            it.isVisible = false
-            it.isVisible = true
-        }
     }
 
     private fun calculateDPValue(): Double {

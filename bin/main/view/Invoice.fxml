@@ -4,7 +4,7 @@
 <?import javafx.scene.layout.*?>
 <?import javafx.geometry.Insets?>
 
-<VBox xmlns:fx="http://javafx.com/fxml"
+<VBox xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1"
     fx:controller="controller.InvoiceController"
     spacing="15"
     prefWidth="800" prefHeight="600"
@@ -69,16 +69,8 @@
     </GridPane>
 
     <!-- Table Produk -->
-    <TableView fx:id="table" prefHeight="300">
-        <columns>
-            <TableColumn fx:id="kolomNo" text="No" prefWidth="60" />
-            <TableColumn fx:id="kolomNama" text="Nama Barang" prefWidth="200" />
-            <TableColumn fx:id="kolomQty" text="Qty" prefWidth="80" />
-            <TableColumn fx:id="kolomUom" text="UOM" prefWidth="80" />
-            <TableColumn fx:id="kolomHarga" text="Unit Price" prefWidth="100" />
-            <TableColumn fx:id="kolomTotal" text="Amount" prefWidth="120" />
-        </columns>
-    </TableView>
+    <!-- Container untuk tabel baru berbasis GridPane -->
+    <VBox fx:id="tableContainer" VBox.vgrow="ALWAYS" />
 
     <!-- Bagian Total, PPN, dan Grand Total -->
     <GridPane hgap="10" vgap="5" alignment="CENTER_RIGHT">
@@ -96,7 +88,8 @@
         <Label fx:id="dpAmountLabel" text="0.00" GridPane.rowIndex="1" GridPane.columnIndex="1" />
 
         <Label text="Gunakan PPN:" GridPane.rowIndex="2" GridPane.columnIndex="0" />
-        <CheckBox fx:id="ppnCheckBox" text="11%" selected="true" GridPane.rowIndex="2" GridPane.columnIndex="1" />
+        <CheckBox fx:id="ppnCheckBox" text="11%" selected="true" GridPane.rowIndex="2"
+            GridPane.columnIndex="1" />
 
         <Label text="PPN Amount:" GridPane.rowIndex="3" GridPane.columnIndex="0" />
         <Label fx:id="ppnAmountLabel" text="0.00" GridPane.rowIndex="3" GridPane.columnIndex="1" />
@@ -114,9 +107,11 @@
         <Button fx:id="tambahBtn" text="Tambah Barang" />
         <Button fx:id="hapusItemBtn" text="Hapus Item" />
         <Button fx:id="simpanBtn" text="Simpan Invoice" />
-        <Button fx:id="cloneBtn" onAction="#onCloneInvoiceClicked" text="Clone" disable="true" style="-fx-background-color: #8b5cf6; -fx-text-fill: white;" />
+        <Button fx:id="cloneBtn" onAction="#onCloneInvoiceClicked" text="Clone" disable="true"
+            style="-fx-background-color: #8b5cf6; -fx-text-fill: white;" />
         <Button fx:id="cetakBtn" text="Cetak" />
-        <Button fx:id="hapusBtn" onAction="#onHapusInvoiceClicked" text="Hapus Invoice" disable="true" />
+        <Button fx:id="hapusBtn" onAction="#onHapusInvoiceClicked" text="Hapus Invoice"
+            disable="true" />
     </HBox>
 
 </VBox>
